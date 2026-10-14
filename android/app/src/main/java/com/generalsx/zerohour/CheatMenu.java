@@ -219,18 +219,47 @@ final class CheatMenu {
     }
 
     private Switch addSwitch(int labelRes, final int id) {
-        Switch sw = new Switch(activity);
-        sw.setText(labelRes);
-        sw.setTextColor(Color.WHITE);
-        sw.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        sw.setPadding(0, dp(4), 0, dp(4));
-        sw.setOnCheckedChangeListener((CompoundButton b, boolean on) -> {
-            if (!syncing) {
-                set(id, on ? 1 : 0);
-            }
-        });
-        panel.addView(sw);
-        return sw;
+    LinearLayout row = new LinearLayout(activity);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER_VERTICAL);
+    row.setPadding(0, dp(4), 0, dp(4));
+
+    TextView label = new TextView(activity);
+    label.setText(labelRes);
+    label.setTextColor(Color.WHITE);
+    label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+
+    LinearLayout.LayoutParams labelParams =
+            new LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    1f
+            );
+
+    row.addView(label, labelParams);
+
+    Switch sw = new Switch(activity);
+    sw.setTextOn("ON");
+    sw.setTextOff("OFF");
+    sw.setShowText(true);
+
+    sw.setOnCheckedChangeListener((button, on) -> {
+        if (!syncing) {
+            set(id, on ? 1 : 0);
+        }
+    });
+
+    row.addView(sw);
+
+    panel.addView(
+            row,
+            new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+    );
+
+    return sw;
     }
 
     // A short tap opens/closes the panel; dragging moves the button out of the way.
