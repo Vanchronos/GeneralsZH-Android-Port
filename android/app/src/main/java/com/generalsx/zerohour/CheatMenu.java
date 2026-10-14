@@ -278,15 +278,10 @@ final class CheatMenu {
 
     /** Reads the engine's current state into the controls (also tells if a game is running). */
     private void refresh() {
-        if (nativeMissing) {
-            toggleButton.setVisibility(View.GONE);
-            closePanel();
-            return;
-        }
-        boolean available = query(QUERY_AVAILABLE) != 0;
-        if (nativeMissing) {
-            return;
-        }
+    boolean available = !nativeMissing && query(QUERY_AVAILABLE) != 0;
+    if (nativeMissing) {
+        return;
+    }
         toggleButton.setAlpha(available ? 0.9f : 0.4f);
         if (!isPanelShown()) {
             return;
