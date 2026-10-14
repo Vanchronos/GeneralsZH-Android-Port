@@ -106,20 +106,24 @@ final class CheatMenu {
     // ---- native bridge; an engine without these symbols just hides the menu ----
 
     private void set(int id, int value) {
-        try {
-            GeneralsZHActivity.nativeCheatSet(id, value);
-        } catch (UnsatisfiedLinkError e) {
-            nativeMissing = true;
-        }
+    try {
+        GeneralsZHActivity.nativeCheatSet(id, value);
+    } catch (UnsatisfiedLinkError e) {
+        android.util.Log.e("GXCHeats",
+                "nativeCheatSet gagal dipanggil", e);
+        nativeMissing = true;
+    }
     }
 
     private int query(int id) {
-        try {
-            return GeneralsZHActivity.nativeCheatQuery(id);
-        } catch (UnsatisfiedLinkError e) {
-            nativeMissing = true;
-            return 0;
-        }
+    try {
+        return GeneralsZHActivity.nativeCheatQuery(id);
+    } catch (UnsatisfiedLinkError e) {
+        android.util.Log.e("GXCHeats",
+                "nativeCheatQuery gagal dipanggil", e);
+        nativeMissing = true;
+        return 0;
+    }
     }
 
     // ---- UI ----
