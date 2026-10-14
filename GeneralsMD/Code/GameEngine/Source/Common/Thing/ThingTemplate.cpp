@@ -71,6 +71,7 @@
 #include "GameLogic/Weapon.h"
 
 #include "Common/UnitTimings.h" //Contains the DO_UNIT_TIMINGS define jba.
+#include "Common/GXCheats.h"
 
 
 //-------------------------------------------------------------------------------------------------
@@ -1581,6 +1582,10 @@ Int ThingTemplate::calcTimeToBuild( const Player* player) const
 		buildTime = 1;
 	}
 #endif
+
+	// GeneralsX @feature Android cheat menu: fast build, local human player only (never an AI player).
+	if( GXCheats::fastBuild( player ) )
+		return 1;
 
 	// Adjust build time based on energy supply.
 

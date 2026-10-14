@@ -101,6 +101,7 @@
 #include "GameLogic/VictoryConditions.h"
 
 #include "GameNetwork/GameInfo.h"
+#include "Common/GXCheats.h"
 
 
 //Grey for neutral.
@@ -671,6 +672,9 @@ void Player::update()
 {
 	if (m_ai)
 		m_ai->update();
+
+	// GeneralsX @feature Android cheat menu: no-op for every AI player and outside single-player.
+	GXCheats::update(this);
 
 	// Allow the teams this player owns to update themselves.
 	for( PlayerTeamList::iterator it = m_playerTeamPrototypes.begin(); it != m_playerTeamPrototypes.end(); ++it )

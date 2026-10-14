@@ -241,6 +241,7 @@ else()
         Source/SDL3Device/GameClient/SDL3Keyboard.cpp
         Source/SDL3Device/GameClient/TouchInput.cpp
         Source/SDL3Device/GameClient/AndroidTextEditor.cpp
+        Source/SDL3Device/GameClient/AndroidCheatBridge.cpp
         Source/VideoDevice/BinkVideoPlayerStub.cpp
     )
 

@@ -610,6 +610,7 @@ set(GAMEENGINE_SRC
 #    Source/Common/RandomValue.cpp
     Source/Common/GXReplayCheck.cpp
     Source/Common/GXSafeArea.cpp
+    Source/Common/GXCheats.cpp
     Source/Common/StatsExporter.cpp
     Source/Common/Recorder.cpp
 #    Source/Common/ReplaySimulation.cpp

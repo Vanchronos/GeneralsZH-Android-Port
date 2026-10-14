@@ -45,6 +45,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "Common/Energy.h"
+#include "Common/GXCheats.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "Common/ThingTemplate.h"
@@ -67,12 +68,14 @@ Energy::Energy()
 //-----------------------------------------------------------------------------
 Int Energy::getProduction() const
 {
-	if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
+	// GeneralsX @feature Android cheat menu: extra kW / immune to sabotage, local human player only.
+	const Int bonus = GXCheats::energyBonus( m_owner );
+	if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame && !GXCheats::energyFull( m_owner ) )
 	{
 		//Power sabotaged, therefore no power.
-		return 0;
+		return bonus;
 	}
-	return m_energyProduction;
+	return m_energyProduction + bonus;
 }
 
 //-----------------------------------------------------------------------------
@@ -80,27 +83,34 @@ Real Energy::getEnergySupplyRatio() const
 {
 	DEBUG_ASSERTCRASH(m_energyProduction >= 0 && m_energyConsumption >= 0, ("neg Energy numbers"));
 
+	// GeneralsX @feature Android cheat menu: "full power" = never short of energy.
+	if( GXCheats::energyFull( m_owner ) )
+		return 1.0f;
+
 	if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
 	{
 		//Power sabotaged, therefore no power, no ratio.
 		return 0.0f;
 	}
 
+	const Int production = getProduction();
 	if (m_energyConsumption == 0)
-		return (Real)m_energyProduction;
+		return (Real)production;
 
-	return (Real)m_energyProduction / (Real)m_energyConsumption;
+	return (Real)production / (Real)m_energyConsumption;
 }
 
 //-------------------------------------------------------------------------------------------------
 Bool Energy::hasSufficientPower() const
 {
+	if( GXCheats::energyFull( m_owner ) )
+		return TRUE;
 	if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
 	{
 		//Power sabotaged, therefore no power.
 		return FALSE;
 	}
-	return m_energyProduction >= m_energyConsumption;
+	return getProduction() >= m_energyConsumption;
 }
 
 //-------------------------------------------------------------------------------------------------

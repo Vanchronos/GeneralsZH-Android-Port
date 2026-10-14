@@ -47,6 +47,7 @@
 
 #include "Common/AudioSettings.h"
 #include "Common/GameAudio.h"
+#include "Common/GXCheats.h"
 #include "Common/MiscAudio.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -61,6 +62,10 @@ UnsignedInt Money::withdraw(UnsignedInt amountToWithdraw, Bool playSound)
 	if (player != nullptr && player->buildsForFree())
 		return 0;
 #endif
+
+	// GeneralsX @feature Android cheat menu: "money does not decrease" for the local human player only.
+	if ((GXCheats::getFlags() & 2) != 0 && GXCheats::appliesToIndex(m_playerIndex))
+		return 0;
 
 	if (amountToWithdraw > m_money)
 		amountToWithdraw = m_money;

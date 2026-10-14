@@ -36,6 +36,7 @@
 #include "Common/Xfer.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/Image.h"
+#include "Common/GXCheats.h"
 
 
 const char *const TheUpgradeTypeNames[] =
@@ -160,6 +161,10 @@ Int UpgradeTemplate::calcTimeToBuild( Player *player ) const
 		return 1;
 	}
 #endif
+
+	// GeneralsX @feature Android cheat menu: fast build, local human player only.
+	if( GXCheats::fastBuild( player ) )
+		return 1;
 
 	///@todo modify this by power state of player
 	return m_buildTime * static_cast<float>(LOGICFRAMES_PER_SECOND);

@@ -101,6 +101,14 @@ public class GeneralsZHActivity extends SDLActivity {
     // back through the two native methods, which only queue for the engine's next frame.
     private TextEditorBar textEditorBar;
 
+    // GeneralsX @feature Android cheat menu: the floating pop-up (CheatMenu) and its two native
+    // entry points (AndroidCheatBridge.cpp). An engine library without them (an older updated
+    // engine) throws UnsatisfiedLinkError, which CheatMenu catches to hide itself.
+    private CheatMenu cheatMenu;
+
+    static native void nativeCheatSet(int id, int value);
+    static native int nativeCheatQuery(int id);
+
     private static native void nativeTextEditorChanged(String text, int serial);
     private static native void nativeTextEditorDone(String text, boolean submit, int serial);
 
@@ -141,6 +149,12 @@ public class GeneralsZHActivity extends SDLActivity {
     // is up, the keyboard takes the first Back itself.
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && cheatMenu != null && cheatMenu.isPanelShown()) {
+            if (event.getAction() == KeyEvent.ACTION_UP) {
+                cheatMenu.closePanel();
+            }
+            return true;
+        }
         if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && textEditorBar != null && textEditorBar.isShown()) {
             if (event.getAction() == KeyEvent.ACTION_UP) {
                 textEditorBar.finish(false);
@@ -402,6 +416,20 @@ public class GeneralsZHActivity extends SDLActivity {
         }
 
         super.onCreate(savedInstanceState);
+
+        // mLayout exists once SDLActivity.onCreate has run. Not shown during replay checks, which
+        // must stay untouched.
+        if (mLayout != null && (getIntent() == null || getIntent().getStringExtra(EXTRA_REPLAY) == null)) {
+            cheatMenu = new CheatMenu(this, mLayout);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (cheatMenu != null) {
+            cheatMenu.destroy();
+        }
+        super.onDestroy();
     }
 
     // GeneralsX @bugfix Android port 02/08/2026 A tester reported the camera
