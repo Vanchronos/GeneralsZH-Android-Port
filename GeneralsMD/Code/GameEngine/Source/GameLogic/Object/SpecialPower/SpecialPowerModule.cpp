@@ -53,6 +53,7 @@
 #include "GameClient/Eva.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/ControlBar.h"
+#include "Common/GXCheats.h"
 
 
 
@@ -297,6 +298,11 @@ Bool SpecialPowerModule::isReady() const
 	const Object* obj = getObject();
 	const SpecialPowerModuleData *modData = getSpecialPowerModuleData();
 
+	// GeneralsX @feature Android cheat menu: no cooldown, local human player only (never an AI player).
+	// A paused power, or one in its 0xFFFFFFFF "busy launching" state, is left alone.
+	if ( obj && m_pausedCount == 0 && m_availableOnFrame != 0xFFFFFFFF && GXCheats::noCooldown( obj->getControllingPlayer() ) )
+		return TRUE;
+
 	if ( obj && modData )
 	{
 		Player *player = getObject()->getControllingPlayer();
@@ -421,7 +427,12 @@ void SpecialPowerModule::startPowerRecharge()
 	else
 	{
 		// set the frame we will be 100% available on now
-		m_availableOnFrame = TheGameLogic->getFrame() + getSpecialPowerTemplate()->getReloadTime();
+		// GeneralsX @feature Android cheat menu: no cooldown means "available again right now".
+		// (Not simply skipping this: it is also what clears the 0xFFFFFFFF launching marker.)
+		if ( GXCheats::noCooldown( player ) )
+			m_availableOnFrame = TheGameLogic->getFrame();
+		else
+			m_availableOnFrame = TheGameLogic->getFrame() + getSpecialPowerTemplate()->getReloadTime();
 	}
 }
 

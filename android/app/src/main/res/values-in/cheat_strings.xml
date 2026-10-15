@@ -11,4 +11,10 @@
     <string name="cheat_status_unavailable">Belum tersedia: mulai game skirmish atau campaign</string>
     <string name="cheat_status_no_native">ERROR: engine ini tidak punya fungsi cheat (JNI tidak terhubung)</string>
     <string name="cheat_note">Hanya berlaku untukmu. Pemain AI (musuh maupun teman) tidak terpengaruh. Nonaktif di match LAN/online dan replay.</string>
+    <string name="cheat_no_cooldown">Tanpa cooldown (super power)</string>
+    <string name="cheat_reveal_map">Buka seluruh peta</string>
+    <string name="cheat_health_bars">Health bar di semua unit</string>
+    <string name="cheat_add_points">+%1$d poin Jenderal</string>
+    <string name="cheat_max_rank">Rank maksimal</string>
+    <string name="cheat_action_sent">Selesai</string>
 </resources>

@@ -24,6 +24,8 @@
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/PartitionManager.h"
+#include "GameLogic/RankInfo.h"
 
 #include <atomic>
 
@@ -34,9 +36,19 @@ namespace
 	std::atomic<bool> s_fastBuild( false );
 	std::atomic<bool> s_energyFull( false );
 	std::atomic<int>  s_energyBonus( 0 );
+	std::atomic<bool> s_noCooldown( false );
+	std::atomic<bool> s_revealMap( false );
+	std::atomic<bool> s_healthBars( false );
 
-	// Last energy setting pushed into the player's brown-out state (see update()).
-	int s_lastEnergyKey = 0;
+	// One-shot requests from the UI thread. They are carried out in update(), on the game thread,
+	// because changing a Player from the Android UI thread would race with the game logic.
+	std::atomic<int>  s_pendingGeneralPoints( 0 );
+	std::atomic<bool> s_pendingMaxRank( false );
+
+	// State that only the game thread touches.
+	int          s_lastEnergyKey = 0;
+	bool         s_revealApplied = false;
+	UnsignedInt  s_lastFrame = 0;
 }
 
 namespace GXCheats
@@ -57,7 +69,13 @@ void setEnergyBonus( Int kilowatts )
 
 Int getFlags()
 {
-	return (s_maxMoney ? 1 : 0) | (s_freezeMoney ? 2 : 0) | (s_fastBuild ? 4 : 0) | (s_energyFull ? 8 : 0);
+	return (s_maxMoney ? FLAG_MAX_MONEY : 0)
+		| (s_freezeMoney ? FLAG_FREEZE_MONEY : 0)
+		| (s_fastBuild ? FLAG_FAST_BUILD : 0)
+		| (s_energyFull ? FLAG_ENERGY_FULL : 0)
+		| (s_noCooldown ? FLAG_NO_COOLDOWN : 0)
+		| (s_revealMap ? FLAG_REVEAL_MAP : 0)
+		| (s_healthBars ? FLAG_HEALTH_BARS : 0);
 }
 
 Int getEnergyBonus() { return s_energyBonus; }
@@ -80,6 +98,44 @@ Int isAvailable()
 	return gameAllowsCheats() ? 1 : 0;
 }
 
+void set( Int id, Int value )
+{
+	switch( id )
+	{
+		case SET_MAX_MONEY:    setMaxMoney( value != 0 ); break;
+		case SET_FREEZE_MONEY: setFreezeMoney( value != 0 ); break;
+		case SET_FAST_BUILD:   setFastBuild( value != 0 ); break;
+		case SET_ENERGY_FULL:  setEnergyFull( value != 0 ); break;
+		case SET_ENERGY_BONUS: setEnergyBonus( value ); break;
+		case SET_NO_COOLDOWN:  s_noCooldown = value != 0; break;
+		case SET_REVEAL_MAP:   s_revealMap = value != 0; break;
+		case SET_HEALTH_BARS:  s_healthBars = value != 0; break;
+		case ACT_ADD_GENERAL_POINTS:
+			// Only while a game that allows cheats is running, so a tap in the menu cannot be
+			// stored up and surprise-apply to a game started later.
+			if( value > 0 && value <= 100 && gameAllowsCheats() )
+				s_pendingGeneralPoints += value;
+			break;
+		case ACT_MAX_RANK:
+			if( gameAllowsCheats() )
+				s_pendingMaxRank = true;
+			break;
+		default: break;
+	}
+}
+
+Int query( Int id )
+{
+	switch( id )
+	{
+		case QUERY_AVAILABLE:    return isAvailable();
+		case QUERY_FLAGS:        return getFlags();
+		case QUERY_ENERGY_BONUS: return getEnergyBonus();
+		default: return 0;
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
 Bool appliesTo( const Player *player )
 {
 	if( player == nullptr || !gameAllowsCheats() )
@@ -101,12 +157,27 @@ Bool freezeMoney( const Player *player ) { return s_freezeMoney && appliesTo( pl
 Bool fastBuild( const Player *player )   { return s_fastBuild && appliesTo( player ); }
 Bool energyFull( const Player *player )  { return s_energyFull && appliesTo( player ); }
 Int  energyBonus( const Player *player ) { return appliesTo( player ) ? (Int)s_energyBonus : 0; }
+Bool noCooldown( const Player *player )  { return s_noCooldown && appliesTo( player ); }
+
+Bool healthBarsAlways()
+{
+	return s_healthBars && gameAllowsCheats();
+}
 
 // ------------------------------------------------------------------------------------------------
 void update( Player *player )
 {
 	if( !appliesTo( player ) )
 		return;
+
+	// A new game starts counting frames from the start again: forget what we did to the last map.
+	const UnsignedInt now = TheGameLogic->getFrame();
+	if( now < s_lastFrame )
+	{
+		s_revealApplied = false;
+		s_lastEnergyKey = 0;
+	}
+	s_lastFrame = now;
 
 	// Max money: top up once the balance drops below 90% of the cap. deposit() with no sound and
 	// no income tracking, so the income-per-minute statistic is left alone.
@@ -126,6 +197,33 @@ void update( Player *player )
 		s_lastEnergyKey = key;
 		player->onPowerBrownOutChange( !player->getEnergy()->hasSufficientPower() );
 	}
+
+	// Reveal map: the same calls the "reveal map permanently" script action uses, mid-game.
+	// Waits until the map has been set up (frame > 1) and re-applies itself in a new game.
+	if( ThePartitionManager != nullptr )
+	{
+		const bool wantReveal = s_revealMap;
+		if( wantReveal && !s_revealApplied && now > 1 )
+		{
+			ThePartitionManager->revealMapForPlayerPermanently( player->getPlayerIndex() );
+			s_revealApplied = true;
+		}
+		else if( !wantReveal && s_revealApplied )
+		{
+			// Only ever undoes a reveal that we did ourselves; undoing one that never happened
+			// would shroud everything the player owns.
+			ThePartitionManager->undoRevealMapForPlayerPermanently( player->getPlayerIndex() );
+			s_revealApplied = false;
+		}
+	}
+
+	// One-shot General's-points requests, taken here on the game thread.
+	const int points = s_pendingGeneralPoints.exchange( 0 );
+	if( points > 0 )
+		player->addSciencePurchasePoints( points );
+
+	if( s_pendingMaxRank.exchange( false ) && TheRankInfoStore != nullptr )
+		player->setRankLevel( TheRankInfoStore->getRankLevelCount() );
 }
 
 } // namespace GXCheats

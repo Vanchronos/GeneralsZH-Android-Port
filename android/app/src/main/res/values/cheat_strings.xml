@@ -12,4 +12,10 @@
     <string name="cheat_status_unavailable">Not available: start a skirmish or campaign game</string>
     <string name="cheat_status_no_native">ERROR: this engine build has no cheat functions (JNI not linked)</string>
     <string name="cheat_note">Applies only to you. AI players (enemy and ally) are unaffected. Disabled in LAN/online matches and replays.</string>
+    <string name="cheat_no_cooldown">No cooldown (super powers)</string>
+    <string name="cheat_reveal_map">Reveal map</string>
+    <string name="cheat_health_bars">Health bars on all units</string>
+    <string name="cheat_add_points">+%1$d General points</string>
+    <string name="cheat_max_rank">Max rank</string>
+    <string name="cheat_action_sent">Done</string>
 </resources>

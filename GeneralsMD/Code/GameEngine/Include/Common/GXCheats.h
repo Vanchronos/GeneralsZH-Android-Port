@@ -34,14 +34,39 @@ namespace GXCheats
 	// Maximum money the "Max money" switch tops the player up to.
 	const UnsignedInt kMaxMoney = 99999999;
 
-	// ---- switches (thread-safe, called from the Android UI thread) ----
+	// Ids shared with CheatMenu.java (through the generic set()/query() JNI pair).
+	enum SetId
+	{
+		SET_MAX_MONEY = 0,
+		SET_FREEZE_MONEY = 1,
+		SET_FAST_BUILD = 2,
+		SET_ENERGY_FULL = 3,
+		SET_ENERGY_BONUS = 4,        // value = extra kW
+		SET_NO_COOLDOWN = 5,         // special powers and Generals powers
+		SET_REVEAL_MAP = 6,
+		SET_HEALTH_BARS = 7,         // health bar on every unit
+		ACT_ADD_GENERAL_POINTS = 8,  // one-shot, value = how many
+		ACT_MAX_RANK = 9             // one-shot
+	};
+	enum QueryId { QUERY_AVAILABLE = 0, QUERY_FLAGS = 1, QUERY_ENERGY_BONUS = 2 };
+
+	// Flag bits returned by query(QUERY_FLAGS).
+	enum FlagBit
+	{
+		FLAG_MAX_MONEY = 1, FLAG_FREEZE_MONEY = 2, FLAG_FAST_BUILD = 4, FLAG_ENERGY_FULL = 8,
+		FLAG_NO_COOLDOWN = 16, FLAG_REVEAL_MAP = 32, FLAG_HEALTH_BARS = 64
+	};
+
+	// ---- from the Android UI thread (thread-safe; the engine applies them on its own thread) ----
+	void set( Int id, Int value );
+	Int  query( Int id );
+
 	void setMaxMoney( Bool on );
 	void setFreezeMoney( Bool on );
 	void setFastBuild( Bool on );
 	void setEnergyFull( Bool on );        // never "low power", ignores sabotage
 	void setEnergyBonus( Int kilowatts ); // extra kW of production, 0 = none
 
-	// Bit mask of what is on: 1 max money, 2 freeze money, 4 fast build, 8 energy full.
 	Int  getFlags();
 	Int  getEnergyBonus();
 
@@ -57,6 +82,10 @@ namespace GXCheats
 	Bool fastBuild( const Player *player );
 	Bool energyFull( const Player *player );
 	Int  energyBonus( const Player *player );
+	Bool noCooldown( const Player *player );
+
+	// Display only: true when health bars should be drawn on every unit.
+	Bool healthBarsAlways();
 
 	// Once per logic frame for each player, from Player::update().
 	void update( Player *player );

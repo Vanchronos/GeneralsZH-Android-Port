@@ -81,6 +81,7 @@
 #include "GameClient/Shadow.h"
 #include "GameClient/GameText.h"
 #include "GXTrace.h"
+#include "Common/GXCheats.h"
 
 #include "ww3d.h"
 
@@ -3882,8 +3883,11 @@ void Drawable::drawHealthBar(const IRegion2D* healthBarRegion)
 	// only draw health for selected drawables and drawables that have been moused over
 	// by the cursor
 	//
-	if( TheGlobalData->m_showObjectHealth &&
-			(isSelected() || (TheInGameUI && (TheInGameUI->getMousedOverDrawableID() == getID()))) )
+	// GeneralsX @feature Android cheat menu: optionally draw the bar for every unit, not just the selected
+	// or moused-over one (a touch screen has no mouse-over). Display only; changes nothing in the game.
+	const Bool gxAlwaysHealth = GXCheats::healthBarsAlways();
+	if( (TheGlobalData->m_showObjectHealth || gxAlwaysHealth) &&
+			(gxAlwaysHealth || isSelected() || (TheInGameUI && (TheInGameUI->getMousedOverDrawableID() == getID()))) )
 	{
 		Object *obj = getObject();
 

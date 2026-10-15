@@ -34,6 +34,7 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 // GeneralsX @feature Android cheat menu: a Cheat-Engine-style pop-up over the game.
 //
@@ -47,12 +48,18 @@ final class CheatMenu {
 
     private static final String TAG = "GXCheatMenu";
 
-    // Keep in step with the JNI block at the end of AndroidTextEditor.cpp.
+    // Keep in step with the ids in Common/GXCheats.h (the JNI pair is generic).
     private static final int SET_MAX_MONEY = 0;
     private static final int SET_FREEZE_MONEY = 1;
     private static final int SET_FAST_BUILD = 2;
     private static final int SET_ENERGY_FULL = 3;
     private static final int SET_ENERGY_BONUS = 4;
+    private static final int SET_NO_COOLDOWN = 5;
+    private static final int SET_REVEAL_MAP = 6;
+    private static final int SET_HEALTH_BARS = 7;
+    private static final int ACT_ADD_GENERAL_POINTS = 8;
+    private static final int ACT_MAX_RANK = 9;
+    private static final int GENERAL_POINTS_PER_TAP = 5;
     private static final int QUERY_AVAILABLE = 0;
     private static final int QUERY_FLAGS = 1;
     private static final int QUERY_ENERGY_BONUS = 2;
@@ -76,6 +83,9 @@ final class CheatMenu {
     private ToggleRow freezeMoney;
     private ToggleRow fastBuild;
     private ToggleRow energyFull;
+    private ToggleRow noCooldown;
+    private ToggleRow revealMap;
+    private ToggleRow healthBars;
     private TextView energyLabel;
     private int energyBonus;
     private boolean nativeMissing;
@@ -194,6 +204,10 @@ final class CheatMenu {
         fastBuild = addToggle(R.string.cheat_fast_build, SET_FAST_BUILD);
         energyFull = addToggle(R.string.cheat_energy_full, SET_ENERGY_FULL);
         addEnergyRow();
+        noCooldown = addToggle(R.string.cheat_no_cooldown, SET_NO_COOLDOWN);
+        revealMap = addToggle(R.string.cheat_reveal_map, SET_REVEAL_MAP);
+        healthBars = addToggle(R.string.cheat_health_bars, SET_HEALTH_BARS);
+        addActionRow();
 
         TextView note = new TextView(activity);
         note.setText(R.string.cheat_note);
@@ -293,6 +307,41 @@ final class CheatMenu {
         panel.addView(row);
     }
 
+    /** Two one-shot buttons: add Generals points, and jump to the highest rank. */
+    private void addActionRow() {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(6), 0, dp(2));
+
+        TextView points = makeChip(activity.getString(R.string.cheat_add_points, GENERAL_POINTS_PER_TAP));
+        points.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { runAction(ACT_ADD_GENERAL_POINTS, GENERAL_POINTS_PER_TAP); }
+        });
+        LinearLayout.LayoutParams pointsParams = new LinearLayout.LayoutParams(0, dp(36), 1f);
+        pointsParams.rightMargin = dp(6);
+        row.addView(points, pointsParams);
+
+        TextView rank = makeChip(activity.getString(R.string.cheat_max_rank));
+        rank.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { runAction(ACT_MAX_RANK, 0); }
+        });
+        row.addView(rank, new LinearLayout.LayoutParams(0, dp(36), 1f));
+
+        panel.addView(row);
+    }
+
+    /** A one-shot action; the engine applies it on its own thread. Tells the player if it could not run. */
+    private void runAction(int id, int value) {
+        boolean available = query(QUERY_AVAILABLE) != 0;
+        if (nativeMissing || !available) {
+            Toast.makeText(activity, R.string.cheat_status_unavailable, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        set(id, value);
+        Toast.makeText(activity, R.string.cheat_action_sent, Toast.LENGTH_SHORT).show();
+    }
+
     private void changeEnergy(int delta) {
         energyBonus = Math.max(0, Math.min(ENERGY_MAX, energyBonus + delta));
         set(SET_ENERGY_BONUS, energyBonus);
@@ -385,6 +434,9 @@ final class CheatMenu {
         freezeMoney.setOn((flags & 2) != 0);
         fastBuild.setOn((flags & 4) != 0);
         energyFull.setOn((flags & 8) != 0);
+        noCooldown.setOn((flags & 16) != 0);
+        revealMap.setOn((flags & 32) != 0);
+        healthBars.setOn((flags & 64) != 0);
         updateEnergyLabel();
     }
 

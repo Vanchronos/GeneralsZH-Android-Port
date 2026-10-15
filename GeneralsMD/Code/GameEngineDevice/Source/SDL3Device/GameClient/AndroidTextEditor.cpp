@@ -256,42 +256,22 @@ void AndroidTextEditor::pump() {}
 // (the earlier AndroidCheatBridge.cpp) is dropped by the linker: its JNI symbols never reached
 // libmain.so and the menu got UnsatisfiedLinkError. This file is always pulled in (the text
 // editor above is referenced by the engine), so these symbols are too.
+// The ids and their meaning live in Common/GXCheats.h, so a new cheat needs no change here.
 #if defined(__ANDROID__)
 
 #include <jni.h>
 #include "Common/GXCheats.h"
 
-namespace GXCheatJni
-{
-	// Keep in step with CheatMenu.java.
-	enum SetId { SET_MAX_MONEY = 0, SET_FREEZE_MONEY = 1, SET_FAST_BUILD = 2, SET_ENERGY_FULL = 3, SET_ENERGY_BONUS = 4 };
-	enum QueryId { QUERY_AVAILABLE = 0, QUERY_FLAGS = 1, QUERY_ENERGY_BONUS = 2 };
-}
-
 extern "C" JNIEXPORT void JNICALL
 Java_com_generalsx_zerohour_GeneralsZHActivity_nativeCheatSet(JNIEnv*, jclass, jint id, jint value)
 {
-	switch (id)
-	{
-		case GXCheatJni::SET_MAX_MONEY:    GXCheats::setMaxMoney(value != 0); break;
-		case GXCheatJni::SET_FREEZE_MONEY: GXCheats::setFreezeMoney(value != 0); break;
-		case GXCheatJni::SET_FAST_BUILD:   GXCheats::setFastBuild(value != 0); break;
-		case GXCheatJni::SET_ENERGY_FULL:  GXCheats::setEnergyFull(value != 0); break;
-		case GXCheatJni::SET_ENERGY_BONUS: GXCheats::setEnergyBonus(value); break;
-		default: break;
-	}
+	GXCheats::set(id, value);
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_generalsx_zerohour_GeneralsZHActivity_nativeCheatQuery(JNIEnv*, jclass, jint id)
 {
-	switch (id)
-	{
-		case GXCheatJni::QUERY_AVAILABLE:    return GXCheats::isAvailable();
-		case GXCheatJni::QUERY_FLAGS:        return GXCheats::getFlags();
-		case GXCheatJni::QUERY_ENERGY_BONUS: return GXCheats::getEnergyBonus();
-		default: return 0;
-	}
+	return GXCheats::query(id);
 }
 
 #endif // __ANDROID__
