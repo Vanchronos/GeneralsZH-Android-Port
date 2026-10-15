@@ -9,5 +9,6 @@
     <string name="cheat_energy_bonus">Daya tambahan: +%1$d kW</string>
     <string name="cheat_status_ready">Aktif: hanya untuk faksi kamu</string>
     <string name="cheat_status_unavailable">Belum tersedia: mulai game skirmish atau campaign</string>
+    <string name="cheat_status_no_native">ERROR: engine ini tidak punya fungsi cheat (JNI tidak terhubung)</string>
     <string name="cheat_note">Hanya berlaku untukmu. Pemain AI (musuh maupun teman) tidak terpengaruh. Nonaktif di match LAN/online dan replay.</string>
 </resources>

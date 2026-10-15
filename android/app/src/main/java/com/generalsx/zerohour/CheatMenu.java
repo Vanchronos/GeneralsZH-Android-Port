@@ -20,32 +20,34 @@ package com.generalsx.zerohour;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
-import android.widget.SeekBar;
-import android.widget.Switch;
 import android.widget.TextView;
 
 // GeneralsX @feature Android cheat menu: a Cheat-Engine-style pop-up over the game.
 //
-// A small draggable button floats over the game; tapping it opens/closes the panel with the
-// switches. Everything the switches do is decided in the engine (Common/GXCheats.cpp): they apply
-// only to the human player on this device, never to AI players (enemy or ally), and not at all in
-// LAN/online matches or replays. While no such game is running the panel says so and the engine
-// ignores the switches. All methods run on the UI thread.
+// A small draggable CHEAT button floats over the game; tapping it opens/closes the panel.
+// Every control here is drawn by hand (colored ON/OFF chips and +/- chips) instead of using the
+// stock Switch/SeekBar widgets, which vanished under the app theme on a real device.
+// What the controls do is decided in the engine (Common/GXCheats.cpp): only the human player on
+// this device is affected, never an AI player, and nothing applies in LAN/online matches or replays.
+// All methods run on the UI thread.
 final class CheatMenu {
 
-    // Keep in step with AndroidCheatBridge.cpp.
+    private static final String TAG = "GXCheatMenu";
+
+    // Keep in step with the JNI block at the end of AndroidTextEditor.cpp.
     private static final int SET_MAX_MONEY = 0;
     private static final int SET_FREEZE_MONEY = 1;
     private static final int SET_FAST_BUILD = 2;
@@ -55,24 +57,27 @@ final class CheatMenu {
     private static final int QUERY_FLAGS = 1;
     private static final int QUERY_ENERGY_BONUS = 2;
 
-    private static final int ENERGY_STEP = 50;      // kW per SeekBar step
-    private static final int ENERGY_MAX_STEPS = 40; // 40 * 50 = 2000 kW
+    private static final int ENERGY_STEP = 100;  // kW per tap on + / -
+    private static final int ENERGY_MAX = 2000;
+
+    private static final int COLOR_ON = 0xFF2E9E50;
+    private static final int COLOR_OFF = 0xFF8A3B3B;
+    private static final int COLOR_BUTTON = 0xFF3A4A5C;
 
     private final Activity activity;
     private final ViewGroup parent;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private TextView toggleButton;
-    private LinearLayout panel;
     private ScrollView panelRoot;
+    private LinearLayout panel;
     private TextView statusText;
-    private Switch maxMoney;
-    private Switch freezeMoney;
-    private Switch fastBuild;
-    private Switch energyFull;
-    private SeekBar energySeek;
+    private ToggleRow maxMoney;
+    private ToggleRow freezeMoney;
+    private ToggleRow fastBuild;
+    private ToggleRow energyFull;
     private TextView energyLabel;
-    private boolean syncing;
+    private int energyBonus;
     private boolean nativeMissing;
 
     private final Runnable poll = new Runnable() {
@@ -103,27 +108,38 @@ final class CheatMenu {
         handler.removeCallbacks(poll);
     }
 
-    // ---- native bridge; an engine without these symbols just hides the menu ----
+    // ---- native bridge ----
+    // If the engine library lacks the JNI functions we keep the menu visible and SAY so in the
+    // panel (and in logcat, tag GXCheatMenu) instead of hiding it: a hidden menu hides the bug.
 
-    private void set(int id, int value) {
-    try {
-        GeneralsZHActivity.nativeCheatSet(id, value);
-    } catch (UnsatisfiedLinkError e) {
-        android.util.Log.e("GXCHeats",
-                "nativeCheatSet gagal dipanggil", e);
+    private void markNativeMissing(UnsatisfiedLinkError e) {
+        if (!nativeMissing) {
+            Log.e(TAG, "Cheat JNI functions not found in the loaded engine library", e);
+        }
         nativeMissing = true;
     }
+
+    private void set(int id, int value) {
+        if (nativeMissing) {
+            return;
+        }
+        try {
+            GeneralsZHActivity.nativeCheatSet(id, value);
+        } catch (UnsatisfiedLinkError e) {
+            markNativeMissing(e);
+        }
     }
 
     private int query(int id) {
-    try {
-        return GeneralsZHActivity.nativeCheatQuery(id);
-    } catch (UnsatisfiedLinkError e) {
-        android.util.Log.e("GXCHeats",
-                "nativeCheatQuery gagal dipanggil", e);
-        nativeMissing = true;
-        return 0;
-    }
+        if (nativeMissing) {
+            return 0;
+        }
+        try {
+            return GeneralsZHActivity.nativeCheatQuery(id);
+        } catch (UnsatisfiedLinkError e) {
+            markNativeMissing(e);
+            return 0;
+        }
     }
 
     // ---- UI ----
@@ -133,8 +149,9 @@ final class CheatMenu {
         toggleButton.setText("CHEAT");
         toggleButton.setTextColor(Color.WHITE);
         toggleButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        toggleButton.setTypeface(null, Typeface.BOLD);
         toggleButton.setGravity(Gravity.CENTER);
-        toggleButton.setAlpha(0.75f);
+        toggleButton.setAlpha(0.8f);
         GradientDrawable chip = new GradientDrawable();
         chip.setColor(0xCC1E6B3A);
         chip.setStroke(dp(1), 0xFF7FD99A);
@@ -151,7 +168,7 @@ final class CheatMenu {
         panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable card = new GradientDrawable();
-        card.setColor(0xE61B1F24);
+        card.setColor(0xF01B1F24);
         card.setStroke(dp(1), 0xFF5C6670);
         card.setCornerRadius(dp(10));
         panel.setBackground(card);
@@ -163,38 +180,20 @@ final class CheatMenu {
         title.setText(R.string.cheat_title);
         title.setTextColor(Color.WHITE);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTypeface(null, Typeface.BOLD);
         panel.addView(title);
 
         statusText = new TextView(activity);
         statusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        statusText.setTextColor(0xFFFFB74D);
         statusText.setPadding(0, dp(2), 0, dp(6));
         panel.addView(statusText);
 
-        maxMoney = addSwitch(R.string.cheat_max_money, SET_MAX_MONEY);
-        freezeMoney = addSwitch(R.string.cheat_freeze_money, SET_FREEZE_MONEY);
-        fastBuild = addSwitch(R.string.cheat_fast_build, SET_FAST_BUILD);
-        energyFull = addSwitch(R.string.cheat_energy_full, SET_ENERGY_FULL);
-
-        energyLabel = new TextView(activity);
-        energyLabel.setTextColor(Color.WHITE);
-        energyLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        energyLabel.setPadding(0, dp(6), 0, 0);
-        panel.addView(energyLabel);
-
-        energySeek = new SeekBar(activity);
-        energySeek.setMax(ENERGY_MAX_STEPS);
-        energySeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
-                updateEnergyLabel(progress * ENERGY_STEP);
-                if (fromUser && !syncing) {
-                    set(SET_ENERGY_BONUS, progress * ENERGY_STEP);
-                }
-            }
-            @Override public void onStartTrackingTouch(SeekBar bar) { }
-            @Override public void onStopTrackingTouch(SeekBar bar) { }
-        });
-        panel.addView(energySeek);
+        maxMoney = addToggle(R.string.cheat_max_money, SET_MAX_MONEY);
+        freezeMoney = addToggle(R.string.cheat_freeze_money, SET_FREEZE_MONEY);
+        fastBuild = addToggle(R.string.cheat_fast_build, SET_FAST_BUILD);
+        energyFull = addToggle(R.string.cheat_energy_full, SET_ENERGY_FULL);
+        addEnergyRow();
 
         TextView note = new TextView(activity);
         note.setText(R.string.cheat_note);
@@ -205,7 +204,8 @@ final class CheatMenu {
 
         panelRoot = new ScrollView(activity);
         panelRoot.addView(panel);
-        RelativeLayout.LayoutParams panelParams = new RelativeLayout.LayoutParams(dp(300), ViewGroup.LayoutParams.WRAP_CONTENT);
+        RelativeLayout.LayoutParams panelParams =
+            new RelativeLayout.LayoutParams(dp(310), ViewGroup.LayoutParams.WRAP_CONTENT);
         panelParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
         panelParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
         panelParams.leftMargin = dp(70);
@@ -214,52 +214,112 @@ final class CheatMenu {
         panelRoot.setVisibility(View.GONE);
         parent.addView(panelRoot, panelParams);
 
-        updateEnergyLabel(0);
+        updateEnergyLabel();
         refresh();
     }
 
-    private Switch addSwitch(int labelRes, final int id) {
-    LinearLayout row = new LinearLayout(activity);
-    row.setOrientation(LinearLayout.HORIZONTAL);
-    row.setGravity(Gravity.CENTER_VERTICAL);
-    row.setPadding(0, dp(4), 0, dp(4));
+    /** One row: a label and a big colored ON / OFF chip. Tap anywhere on the row to flip it. */
+    private final class ToggleRow {
+        private final TextView chip;
+        private boolean on;
 
-    TextView label = new TextView(activity);
-    label.setText(labelRes);
-    label.setTextColor(Color.WHITE);
-    label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        ToggleRow(int labelRes, final int id) {
+            LinearLayout row = new LinearLayout(activity);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setMinimumHeight(dp(44));
+            row.setClickable(true);
 
-    LinearLayout.LayoutParams labelParams =
-            new LinearLayout.LayoutParams(
-                    0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    1f
-            );
+            TextView label = new TextView(activity);
+            label.setText(labelRes);
+            label.setTextColor(Color.WHITE);
+            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            row.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-    row.addView(label, labelParams);
+            chip = makeChip("OFF");
+            row.addView(chip, new LinearLayout.LayoutParams(dp(60), dp(32)));
+            setOn(false);
 
-    Switch sw = new Switch(activity);
-    sw.setTextOn("ON");
-    sw.setTextOff("OFF");
-    sw.setShowText(true);
-
-    sw.setOnCheckedChangeListener((button, on) -> {
-        if (!syncing) {
-            set(id, on ? 1 : 0);
+            View.OnClickListener flip = new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    setOn(!on);
+                    set(id, on ? 1 : 0);
+                }
+            };
+            row.setOnClickListener(flip);
+            chip.setOnClickListener(flip);
+            panel.addView(row);
         }
-    });
 
-    row.addView(sw);
+        void setOn(boolean value) {
+            on = value;
+            chip.setText(value ? "ON" : "OFF");
+            setChipColor(chip, value ? COLOR_ON : COLOR_OFF);
+        }
+    }
 
-    panel.addView(
-            row,
-            new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-    );
+    private ToggleRow addToggle(int labelRes, int id) {
+        return new ToggleRow(labelRes, id);
+    }
 
-    return sw;
+    /** Extra power: label with  [-]  [+]  chips, 100 kW per tap. */
+    private void addEnergyRow() {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setMinimumHeight(dp(44));
+
+        energyLabel = new TextView(activity);
+        energyLabel.setTextColor(Color.WHITE);
+        energyLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        row.addView(energyLabel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView minus = makeChip("-");
+        setChipColor(minus, COLOR_BUTTON);
+        minus.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { changeEnergy(-ENERGY_STEP); }
+        });
+        LinearLayout.LayoutParams minusParams = new LinearLayout.LayoutParams(dp(40), dp(32));
+        minusParams.rightMargin = dp(6);
+        row.addView(minus, minusParams);
+
+        TextView plus = makeChip("+");
+        setChipColor(plus, COLOR_BUTTON);
+        plus.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { changeEnergy(ENERGY_STEP); }
+        });
+        row.addView(plus, new LinearLayout.LayoutParams(dp(40), dp(32)));
+
+        panel.addView(row);
+    }
+
+    private void changeEnergy(int delta) {
+        energyBonus = Math.max(0, Math.min(ENERGY_MAX, energyBonus + delta));
+        set(SET_ENERGY_BONUS, energyBonus);
+        updateEnergyLabel();
+    }
+
+    private void updateEnergyLabel() {
+        energyLabel.setText(activity.getString(R.string.cheat_energy_bonus, energyBonus));
+    }
+
+    private TextView makeChip(String text) {
+        TextView t = new TextView(activity);
+        t.setText(text);
+        t.setTextColor(Color.WHITE);
+        t.setTypeface(null, Typeface.BOLD);
+        t.setGravity(Gravity.CENTER);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        t.setClickable(true);
+        setChipColor(t, COLOR_BUTTON);
+        return t;
+    }
+
+    private void setChipColor(TextView t, int color) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(color);
+        g.setCornerRadius(dp(6));
+        t.setBackground(g);
     }
 
     // A short tap opens/closes the panel; dragging moves the button out of the way.
@@ -305,32 +365,27 @@ final class CheatMenu {
         }
     }
 
-    /** Reads the engine's current state into the controls (also tells if a game is running). */
+    /** Reads the engine's current state into the controls (and tells if a game is running). */
     private void refresh() {
-    boolean available = !nativeMissing && query(QUERY_AVAILABLE) != 0;
-    if (nativeMissing) {
-        return;
-    }
-        toggleButton.setAlpha(available ? 0.9f : 0.4f);
+        int available = query(QUERY_AVAILABLE);
+        toggleButton.setAlpha(nativeMissing ? 0.45f : (available != 0 ? 0.95f : 0.6f));
         if (!isPanelShown()) {
             return;
         }
-        statusText.setText(available ? R.string.cheat_status_ready : R.string.cheat_status_unavailable);
-        statusText.setTextColor(available ? 0xFF7FD99A : 0xFFFFB74D);
+        if (nativeMissing) {
+            statusText.setText(R.string.cheat_status_no_native);
+            statusText.setTextColor(0xFFEF5350);
+            return;
+        }
+        statusText.setText(available != 0 ? R.string.cheat_status_ready : R.string.cheat_status_unavailable);
+        statusText.setTextColor(available != 0 ? 0xFF7FD99A : 0xFFFFB74D);
         int flags = query(QUERY_FLAGS);
-        int bonus = query(QUERY_ENERGY_BONUS);
-        syncing = true;
-        maxMoney.setChecked((flags & 1) != 0);
-        freezeMoney.setChecked((flags & 2) != 0);
-        fastBuild.setChecked((flags & 4) != 0);
-        energyFull.setChecked((flags & 8) != 0);
-        energySeek.setProgress(Math.min(ENERGY_MAX_STEPS, bonus / ENERGY_STEP));
-        updateEnergyLabel(bonus);
-        syncing = false;
-    }
-
-    private void updateEnergyLabel(int kilowatts) {
-        energyLabel.setText(activity.getString(R.string.cheat_energy_bonus, kilowatts));
+        energyBonus = query(QUERY_ENERGY_BONUS);
+        maxMoney.setOn((flags & 1) != 0);
+        freezeMoney.setOn((flags & 2) != 0);
+        fastBuild.setOn((flags & 4) != 0);
+        energyFull.setOn((flags & 8) != 0);
+        updateEnergyLabel();
     }
 
     private int dp(int value) {
