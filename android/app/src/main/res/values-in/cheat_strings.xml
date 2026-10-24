@@ -17,4 +17,12 @@
     <string name="cheat_add_points">+%1$d poin Jenderal</string>
     <string name="cheat_max_rank">Rank maksimal</string>
     <string name="cheat_action_sent">Selesai</string>
+    <string name="cheat_economy_info">Tampilkan uang semua pemain</string>
+    <string name="cheat_income">Income tambahan +$1000 / detik</string>
+    <string name="cheat_damage">Damage senjata x3</string>
+    <string name="cheat_fire_rate">Kecepatan tembak x3</string>
+    <string name="cheat_tough">Unit tahan banting (damage diterima 10%)</string>
+    <string name="cheat_speed">Kecepatan unit x1.5</string>
+    <string name="cheat_elite">Unit selalu veteran maksimal</string>
+    <string name="cheat_air_ammo">Pesawat tanpa isi ulang amunisi</string>
 </resources>

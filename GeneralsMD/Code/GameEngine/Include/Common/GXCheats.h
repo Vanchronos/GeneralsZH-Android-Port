@@ -28,11 +28,19 @@
 #include "Lib/BaseType.h"
 
 class Player;
+class WeaponBonus;
 
 namespace GXCheats
 {
 	// Maximum money the "Max money" switch tops the player up to.
 	const UnsignedInt kMaxMoney = 99999999;
+
+	// Strength of the extra cheats. They only ever apply to the local human player.
+	const Real kDamageScale = 3.0f;        // damage dealt by the player's weapons
+	const Real kFireRateScale = 3.0f;      // fire rate of the player's weapons
+	const Real kDamageTakenScale = 0.1f;   // "tough units": the player's units take 10% of the damage
+	const Real kSpeedScale = 1.5f;         // movement speed of the player's units
+	const Int  kIncomePerSecond = 1000;    // extra money per second
 
 	// Ids shared with CheatMenu.java (through the generic set()/query() JNI pair).
 	enum SetId
@@ -46,7 +54,15 @@ namespace GXCheats
 		SET_REVEAL_MAP = 6,
 		SET_HEALTH_BARS = 7,         // health bar on every unit
 		ACT_ADD_GENERAL_POINTS = 8,  // one-shot, value = how many
-		ACT_MAX_RANK = 9             // one-shot
+		ACT_MAX_RANK = 9,            // one-shot
+		SET_ECONOMY_INFO = 10,       // show every player's money / rank / XP on screen
+		SET_DAMAGE = 11,             // weapons hit harder
+		SET_FIRE_RATE = 12,          // weapons fire faster
+		SET_TOUGH = 13,              // units take much less damage
+		SET_SPEED = 14,              // units move faster
+		SET_ELITE = 15,              // units are always at the top veterancy level
+		SET_AIR_AMMO = 16,           // aircraft never need to reload
+		SET_INCOME = 17              // extra money every second
 	};
 	enum QueryId { QUERY_AVAILABLE = 0, QUERY_FLAGS = 1, QUERY_ENERGY_BONUS = 2 };
 
@@ -54,7 +70,9 @@ namespace GXCheats
 	enum FlagBit
 	{
 		FLAG_MAX_MONEY = 1, FLAG_FREEZE_MONEY = 2, FLAG_FAST_BUILD = 4, FLAG_ENERGY_FULL = 8,
-		FLAG_NO_COOLDOWN = 16, FLAG_REVEAL_MAP = 32, FLAG_HEALTH_BARS = 64
+		FLAG_NO_COOLDOWN = 16, FLAG_REVEAL_MAP = 32, FLAG_HEALTH_BARS = 64, FLAG_ECONOMY_INFO = 128,
+		FLAG_DAMAGE = 256, FLAG_FIRE_RATE = 512, FLAG_TOUGH = 1024, FLAG_SPEED = 2048,
+		FLAG_ELITE = 4096, FLAG_AIR_AMMO = 8192, FLAG_INCOME = 16384
 	};
 
 	// ---- from the Android UI thread (thread-safe; the engine applies them on its own thread) ----
@@ -84,8 +102,18 @@ namespace GXCheats
 	Int  energyBonus( const Player *player );
 	Bool noCooldown( const Player *player );
 
+	// Weapon::computeBonus(): scale damage / fire rate if the weapon belongs to the local human player.
+	void applyWeaponBonus( const Player *owner, WeaponBonus &bonus );
+
+	// ActiveBody::attemptDamage(): 1 normally, kDamageTakenScale for the local human player's objects.
+	Real damageTakenScale( const Player *owner );
+
 	// Display only: true when health bars should be drawn on every unit.
 	Bool healthBarsAlways();
+
+	// Display only: true when the player info list (team, money, rank, XP of every player,
+	// the list normally shown to observers) should be drawn.
+	Bool showEconomyInfo();
 
 	// Once per logic frame for each player, from Player::update().
 	void update( Player *player );

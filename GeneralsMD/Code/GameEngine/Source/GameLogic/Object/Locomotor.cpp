@@ -796,7 +796,8 @@ Real Locomotor::getMaxSpeedForCondition(BodyDamageType condition) const
 	if (speed > m_maxSpeed)
 		speed = m_maxSpeed;
 
-	return speed;
+	// GeneralsX @feature Android cheat menu: 1 for everyone except the local human player's units.
+	return speed * m_gxSpeedScale;
 }
 
 //-------------------------------------------------------------------------------------------------

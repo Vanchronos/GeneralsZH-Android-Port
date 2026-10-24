@@ -70,6 +70,7 @@
 #include "GameLogic/ObjectCreationList.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/Weapon.h"
+#include "Common/GXCheats.h"
 
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/AssistedTargetingUpdate.h"
@@ -1957,6 +1958,10 @@ void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraB
 	const WeaponBonusSet* extra = m_template->getExtraBonus();
 	if (extra)
 		extra->appendBonuses(flags, bonus);
+
+	// GeneralsX @feature Android cheat menu: damage / fire-rate multiplier for the local human player's
+	// weapons only. An AI player's weapons never match, so they are left exactly as they were.
+	GXCheats::applyWeaponBonus( source->getControllingPlayer(), bonus );
 #if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
      // Fix v1 quad cannon damage this way for now
      const char* weaponName = m_template->getName().str();

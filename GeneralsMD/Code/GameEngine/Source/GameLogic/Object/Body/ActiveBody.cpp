@@ -50,6 +50,7 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/Damage.h"
+#include "Common/GXCheats.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Weapon.h"
@@ -368,6 +369,11 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 	Bool alreadyHandled = FALSE;
 	Bool allowModifier = TRUE;
 	Real amount = m_curArmor.adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount);
+
+	// GeneralsX @feature Android cheat menu: "tough units" - the local human player's objects take less damage.
+	// Scripted armour-proof damage (sell, self-destruct, kill) is left alone.
+	if( damageInfo->in.m_damageType != DAMAGE_UNRESISTABLE && !damageInfo->in.m_kill )
+		amount *= GXCheats::damageTakenScale( obj->getControllingPlayer() );
 
 	switch( damageInfo->in.m_damageType )
 	{

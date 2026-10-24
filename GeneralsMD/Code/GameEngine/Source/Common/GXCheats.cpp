@@ -23,9 +23,15 @@
 #include "Common/Money.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
+#include "Common/KindOf.h"
+#include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/Locomotor.h"
+#include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/RankInfo.h"
+#include "GameLogic/Weapon.h"
 
 #include <atomic>
 
@@ -39,6 +45,14 @@ namespace
 	std::atomic<bool> s_noCooldown( false );
 	std::atomic<bool> s_revealMap( false );
 	std::atomic<bool> s_healthBars( false );
+	std::atomic<bool> s_economyInfo( false );
+	std::atomic<bool> s_damage( false );
+	std::atomic<bool> s_fireRate( false );
+	std::atomic<bool> s_tough( false );
+	std::atomic<bool> s_speed( false );
+	std::atomic<bool> s_elite( false );
+	std::atomic<bool> s_airAmmo( false );
+	std::atomic<bool> s_income( false );
 
 	// One-shot requests from the UI thread. They are carried out in update(), on the game thread,
 	// because changing a Player from the Android UI thread would race with the game logic.
@@ -75,7 +89,15 @@ Int getFlags()
 		| (s_energyFull ? FLAG_ENERGY_FULL : 0)
 		| (s_noCooldown ? FLAG_NO_COOLDOWN : 0)
 		| (s_revealMap ? FLAG_REVEAL_MAP : 0)
-		| (s_healthBars ? FLAG_HEALTH_BARS : 0);
+		| (s_healthBars ? FLAG_HEALTH_BARS : 0)
+		| (s_economyInfo ? FLAG_ECONOMY_INFO : 0)
+		| (s_damage ? FLAG_DAMAGE : 0)
+		| (s_fireRate ? FLAG_FIRE_RATE : 0)
+		| (s_tough ? FLAG_TOUGH : 0)
+		| (s_speed ? FLAG_SPEED : 0)
+		| (s_elite ? FLAG_ELITE : 0)
+		| (s_airAmmo ? FLAG_AIR_AMMO : 0)
+		| (s_income ? FLAG_INCOME : 0);
 }
 
 Int getEnergyBonus() { return s_energyBonus; }
@@ -110,6 +132,14 @@ void set( Int id, Int value )
 		case SET_NO_COOLDOWN:  s_noCooldown = value != 0; break;
 		case SET_REVEAL_MAP:   s_revealMap = value != 0; break;
 		case SET_HEALTH_BARS:  s_healthBars = value != 0; break;
+		case SET_ECONOMY_INFO: s_economyInfo = value != 0; break;
+		case SET_DAMAGE:       s_damage = value != 0; break;
+		case SET_FIRE_RATE:    s_fireRate = value != 0; break;
+		case SET_TOUGH:        s_tough = value != 0; break;
+		case SET_SPEED:        s_speed = value != 0; break;
+		case SET_ELITE:        s_elite = value != 0; break;
+		case SET_AIR_AMMO:     s_airAmmo = value != 0; break;
+		case SET_INCOME:       s_income = value != 0; break;
 		case ACT_ADD_GENERAL_POINTS:
 			// Only while a game that allows cheats is running, so a tap in the menu cannot be
 			// stored up and surprise-apply to a game started later.
@@ -164,6 +194,60 @@ Bool healthBarsAlways()
 	return s_healthBars && gameAllowsCheats();
 }
 
+Bool showEconomyInfo()
+{
+	return s_economyInfo && gameAllowsCheats();
+}
+
+// Called for every weapon of every player; only the local human's weapons are ever changed.
+void applyWeaponBonus( const Player *owner, WeaponBonus &bonus )
+{
+	if( !(s_damage || s_fireRate) || !appliesTo( owner ) )
+		return;
+	if( s_damage )
+		bonus.setField( WeaponBonus::DAMAGE, bonus.getField( WeaponBonus::DAMAGE ) * kDamageScale );
+	if( s_fireRate )
+		bonus.setField( WeaponBonus::RATE_OF_FIRE, bonus.getField( WeaponBonus::RATE_OF_FIRE ) * kFireRateScale );
+}
+
+Real damageTakenScale( const Player *owner )
+{
+	return ( s_tough && appliesTo( owner ) ) ? kDamageTakenScale : 1.0f;
+}
+
+// ------------------------------------------------------------------------------------------------
+// Things that have to be done to the player's objects themselves, a couple of times a second.
+static void upkeepObjects( Player *player )
+{
+	const Real speedScale = s_speed ? kSpeedScale : 1.0f; // written every time, so switching off restores 1.0
+	const bool elite = s_elite;
+	const bool airAmmo = s_airAmmo;
+
+	for( Object *obj = TheGameLogic->getFirstObject(); obj != nullptr; obj = obj->getNextObject() )
+	{
+		if( obj->getControllingPlayer() != player || obj->isEffectivelyDead() )
+			continue;
+
+		AIUpdateInterface *ai = obj->getAI();
+		if( ai != nullptr )
+		{
+			Locomotor *loco = ai->getCurLocomotor();
+			if( loco != nullptr )
+				loco->setGxSpeedScale( speedScale );
+		}
+
+		if( elite )
+		{
+			ExperienceTracker *xp = obj->getExperienceTracker();
+			if( xp != nullptr && xp->isTrainable() )
+				xp->setMinVeterancyLevel( LEVEL_HEROIC, FALSE );
+		}
+
+		if( airAmmo && obj->isKindOf( KINDOF_AIRCRAFT ) )
+			obj->reloadAllAmmo( TRUE );
+	}
+}
+
 // ------------------------------------------------------------------------------------------------
 void update( Player *player )
 {
@@ -216,6 +300,15 @@ void update( Player *player )
 			s_revealApplied = false;
 		}
 	}
+
+	// Extra income: a fixed amount every second, no sound and not counted as harvested income.
+	if( s_income && now % LOGICFRAMES_PER_SECOND == 0 )
+		player->getMoney()->deposit( kIncomePerSecond, FALSE, FALSE );
+
+	// Speed, veterancy and aircraft ammo act on the objects: twice a second is plenty.
+	// (Also runs when everything is off, to put the speed scale back to 1 after switching it off.)
+	if( now % ( LOGICFRAMES_PER_SECOND / 2 ) == 0 )
+		upkeepObjects( player );
 
 	// One-shot General's-points requests, taken here on the game thread.
 	const int points = s_pendingGeneralPoints.exchange( 0 );

@@ -245,6 +245,11 @@ public:
 	Bool locoUpdate_maintainCurrentPosition(Object* obj);
 
 	Real getMaxSpeedForCondition(BodyDamageType condition) const;  ///< get max speed given condition
+
+	// GeneralsX @feature Android cheat menu: speed multiplier for this one locomotor instance (1 = normal).
+	// Per instance, not per template, so AI units that share the template are never affected.
+	void setGxSpeedScale( Real scale ) { m_gxSpeedScale = scale; }
+	Real getGxSpeedScale() const { return m_gxSpeedScale; }
 	Real getMaxTurnRate(BodyDamageType condition) const;  ///< get max turning rate given condition
 	Real getMaxAcceleration(BodyDamageType condition) const;  ///< get acceleration given condition
 	Real getMaxLift(BodyDamageType condition) const;  ///< get acceleration given condition
@@ -416,6 +421,8 @@ protected:
 	//~Locomotor();
 
 private:
+
+	Real m_gxSpeedScale = 1.0f;	///< GeneralsX cheat menu speed multiplier, see setGxSpeedScale()
 
 	//
 	// Note: these values are saved in save files, so you MUST NOT REMOVE OR CHANGE
