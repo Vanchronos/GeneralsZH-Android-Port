@@ -45,14 +45,12 @@ namespace
 	std::atomic<bool> s_noCooldown( false );
 	std::atomic<bool> s_revealMap( false );
 	std::atomic<bool> s_healthBars( false );
-	std::atomic<bool> s_economyInfo( false );
 	std::atomic<bool> s_damage( false );
 	std::atomic<bool> s_fireRate( false );
 	std::atomic<bool> s_tough( false );
 	std::atomic<bool> s_speed( false );
 	std::atomic<bool> s_elite( false );
 	std::atomic<bool> s_airAmmo( false );
-	std::atomic<bool> s_income( false );
 
 	// One-shot requests from the UI thread. They are carried out in update(), on the game thread,
 	// because changing a Player from the Android UI thread would race with the game logic.
@@ -90,14 +88,12 @@ Int getFlags()
 		| (s_noCooldown ? FLAG_NO_COOLDOWN : 0)
 		| (s_revealMap ? FLAG_REVEAL_MAP : 0)
 		| (s_healthBars ? FLAG_HEALTH_BARS : 0)
-		| (s_economyInfo ? FLAG_ECONOMY_INFO : 0)
 		| (s_damage ? FLAG_DAMAGE : 0)
 		| (s_fireRate ? FLAG_FIRE_RATE : 0)
 		| (s_tough ? FLAG_TOUGH : 0)
 		| (s_speed ? FLAG_SPEED : 0)
 		| (s_elite ? FLAG_ELITE : 0)
-		| (s_airAmmo ? FLAG_AIR_AMMO : 0)
-		| (s_income ? FLAG_INCOME : 0);
+		| (s_airAmmo ? FLAG_AIR_AMMO : 0);
 }
 
 Int getEnergyBonus() { return s_energyBonus; }
@@ -132,14 +128,12 @@ void set( Int id, Int value )
 		case SET_NO_COOLDOWN:  s_noCooldown = value != 0; break;
 		case SET_REVEAL_MAP:   s_revealMap = value != 0; break;
 		case SET_HEALTH_BARS:  s_healthBars = value != 0; break;
-		case SET_ECONOMY_INFO: s_economyInfo = value != 0; break;
 		case SET_DAMAGE:       s_damage = value != 0; break;
 		case SET_FIRE_RATE:    s_fireRate = value != 0; break;
 		case SET_TOUGH:        s_tough = value != 0; break;
 		case SET_SPEED:        s_speed = value != 0; break;
 		case SET_ELITE:        s_elite = value != 0; break;
 		case SET_AIR_AMMO:     s_airAmmo = value != 0; break;
-		case SET_INCOME:       s_income = value != 0; break;
 		case ACT_ADD_GENERAL_POINTS:
 			// Only while a game that allows cheats is running, so a tap in the menu cannot be
 			// stored up and surprise-apply to a game started later.
@@ -192,11 +186,6 @@ Bool noCooldown( const Player *player )  { return s_noCooldown && appliesTo( pla
 Bool healthBarsAlways()
 {
 	return s_healthBars && gameAllowsCheats();
-}
-
-Bool showEconomyInfo()
-{
-	return s_economyInfo && gameAllowsCheats();
 }
 
 // Called for every weapon of every player; only the local human's weapons are ever changed.
@@ -300,10 +289,6 @@ void update( Player *player )
 			s_revealApplied = false;
 		}
 	}
-
-	// Extra income: a fixed amount every second, no sound and not counted as harvested income.
-	if( s_income && now % LOGICFRAMES_PER_SECOND == 0 )
-		player->getMoney()->deposit( kIncomePerSecond, FALSE, FALSE );
 
 	// Speed, veterancy and aircraft ammo act on the objects: twice a second is plenty.
 	// (Also runs when everything is off, to put the speed scale back to 1 after switching it off.)

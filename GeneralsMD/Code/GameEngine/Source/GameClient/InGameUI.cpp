@@ -30,7 +30,6 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "Common/GXSafeArea.h"
-#include "Common/GXCheats.h"
 #include <stdio.h>
 
 #define DEFINE_SHADOW_NAMES
@@ -4236,11 +4235,7 @@ void InGameUI::postWindowDraw()
 		drawGameTime();
 	}
 
-	// GeneralsX @feature Android cheat menu: also show the observer's player info list (money, rank, XP of
-	// every player) in a single-player game when asked. It reads TheGameInfo for team numbers, so only
-	// when a game info exists (skirmish; a campaign has none).
-	const Bool gxEconomyInfo = GXCheats::showEconomyInfo() && TheGameInfo != nullptr;
-	if (m_playerInfoListPointSize > 0 && TheGameLogic->isInGame() && (TheControlBar->isObserverControlBarOn() || gxEconomyInfo))
+	if (m_playerInfoListPointSize > 0 && TheGameLogic->isInGame() && (TheControlBar->isObserverControlBarOn()))
 	{
 		drawPlayerInfoList();
 	}

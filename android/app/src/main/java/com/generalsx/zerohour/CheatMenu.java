@@ -59,14 +59,12 @@ final class CheatMenu {
     private static final int SET_HEALTH_BARS = 7;
     private static final int ACT_ADD_GENERAL_POINTS = 8;
     private static final int ACT_MAX_RANK = 9;
-    private static final int SET_ECONOMY_INFO = 10;
     private static final int SET_DAMAGE = 11;
     private static final int SET_FIRE_RATE = 12;
     private static final int SET_TOUGH = 13;
     private static final int SET_SPEED = 14;
     private static final int SET_ELITE = 15;
     private static final int SET_AIR_AMMO = 16;
-    private static final int SET_INCOME = 17;
     private static final int GENERAL_POINTS_PER_TAP = 5;
     private static final int QUERY_AVAILABLE = 0;
     private static final int QUERY_FLAGS = 1;
@@ -94,14 +92,12 @@ final class CheatMenu {
     private ToggleRow noCooldown;
     private ToggleRow revealMap;
     private ToggleRow healthBars;
-    private ToggleRow economyInfo;
     private ToggleRow damage;
     private ToggleRow fireRate;
     private ToggleRow tough;
     private ToggleRow speed;
     private ToggleRow elite;
     private ToggleRow airAmmo;
-    private ToggleRow income;
     private TextView energyLabel;
     private int energyBonus;
     private boolean nativeMissing;
@@ -223,8 +219,6 @@ final class CheatMenu {
         noCooldown = addToggle(R.string.cheat_no_cooldown, SET_NO_COOLDOWN);
         revealMap = addToggle(R.string.cheat_reveal_map, SET_REVEAL_MAP);
         healthBars = addToggle(R.string.cheat_health_bars, SET_HEALTH_BARS);
-        economyInfo = addToggle(R.string.cheat_economy_info, SET_ECONOMY_INFO);
-        income = addToggle(R.string.cheat_income, SET_INCOME);
         damage = addToggle(R.string.cheat_damage, SET_DAMAGE);
         fireRate = addToggle(R.string.cheat_fire_rate, SET_FIRE_RATE);
         tough = addToggle(R.string.cheat_tough, SET_TOUGH);
@@ -461,14 +455,12 @@ final class CheatMenu {
         noCooldown.setOn((flags & 16) != 0);
         revealMap.setOn((flags & 32) != 0);
         healthBars.setOn((flags & 64) != 0);
-        economyInfo.setOn((flags & 128) != 0);
         damage.setOn((flags & 256) != 0);
         fireRate.setOn((flags & 512) != 0);
         tough.setOn((flags & 1024) != 0);
         speed.setOn((flags & 2048) != 0);
         elite.setOn((flags & 4096) != 0);
         airAmmo.setOn((flags & 8192) != 0);
-        income.setOn((flags & 16384) != 0);
         updateEnergyLabel();
     }
 
