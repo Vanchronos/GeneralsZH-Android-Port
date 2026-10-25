@@ -37,6 +37,8 @@ import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.util.ArrayList;
+import java.util.List;
 
 // GeneralsX @feature Android cheat menu: a Cheat-Engine-style pop-up over the game.
 //
@@ -97,6 +99,8 @@ final class CheatMenu {
     private TextView toggleButton;
     private ScrollView panelRoot;
     private LinearLayout panel;
+    private LinearLayout currentSection;
+    private final List<ToggleRow> toggleRows = new ArrayList<>();
     private TextView statusText;
     private ToggleRow maxMoney;
     private ToggleRow freezeMoney;
@@ -191,6 +195,83 @@ final class CheatMenu {
 
     // ---- UI ----
 
+    /** Adds a collapsible, styled category while preserving the existing cheat controls. */
+    private LinearLayout addSection(String titleText, boolean expandedInitially) {
+        final LinearLayout content = new LinearLayout(activity);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(4), dp(2), dp(4), dp(5));
+        content.setVisibility(expandedInitially ? View.VISIBLE : View.GONE);
+
+        final boolean[] expanded = new boolean[] { expandedInitially };
+        final TextView heading = new TextView(activity);
+        heading.setText((expanded[0] ? "▼  " : "▶  ") + titleText);
+        heading.setTextColor(0xFFE7F0F8);
+        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        heading.setTypeface(null, Typeface.BOLD);
+        heading.setGravity(Gravity.CENTER_VERTICAL);
+        heading.setPadding(dp(10), dp(8), dp(10), dp(8));
+        heading.setMinHeight(dp(36));
+        heading.setClickable(true);
+        GradientDrawable headerBg = new GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            new int[] { 0xFF223747, 0xFF192633 });
+        headerBg.setCornerRadius(dp(8));
+        headerBg.setStroke(dp(1), 0xFF3D6579);
+        heading.setBackground(headerBg);
+        heading.setElevation(dp(1));
+
+        LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        headerParams.topMargin = dp(5);
+        headerParams.bottomMargin = dp(2);
+        panel.addView(heading, headerParams);
+        panel.addView(content, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        heading.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                expanded[0] = !expanded[0];
+                content.setVisibility(expanded[0] ? View.VISIBLE : View.GONE);
+                heading.setText((expanded[0] ? "▼  " : "▶  ") + titleText);
+            }
+        });
+        return content;
+    }
+
+    /** Add a control to the current category; falls back to the panel for top-level controls. */
+    private void addCurrentRow(View row) {
+        LinearLayout target = currentSection != null ? currentSection : panel;
+        target.addView(row);
+    }
+
+    /** Turns off toggle controls only. One-shot actions and the energy +/- amount are not executed. */
+    private void addDisableAllButton() {
+        TextView disableAll = makeChip("DISABLE ALL TOGGLES");
+        GradientDrawable bg = new GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[] { 0xFF75404A, 0xFF4A252E });
+        bg.setCornerRadius(dp(8));
+        bg.setStroke(dp(1), 0xFFC97782);
+        disableAll.setBackground(bg);
+        disableAll.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(38));
+        params.topMargin = dp(9);
+        params.bottomMargin = dp(2);
+        panel.addView(disableAll, params);
+        disableAll.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (nativeMissing || query(QUERY_AVAILABLE) == 0) {
+                    Toast.makeText(activity, R.string.cheat_status_unavailable, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                for (ToggleRow toggle : toggleRows) toggle.disable();
+                Toast.makeText(activity, "All toggles turned OFF", Toast.LENGTH_SHORT).show();
+                refresh();
+            }
+        });
+    }
+
     private void build() {
         toggleButton = new TextView(activity);
         toggleButton.setText("CHEAT");
@@ -263,28 +344,44 @@ final class CheatMenu {
         statusParams.bottomMargin = dp(7);
         panel.addView(statusText, statusParams);
 
+        // Compact tactical categories. Existing ToggleRow objects and native IDs remain unchanged.
+        currentSection = addSection("ECONOMY & POWER", true);
         maxMoney = addToggle(R.string.cheat_max_money, SET_MAX_MONEY);
         freezeMoney = addToggle(R.string.cheat_freeze_money, SET_FREEZE_MONEY);
-        fastBuild = addToggle(R.string.cheat_fast_build, SET_FAST_BUILD);
         energyFull = addToggle(R.string.cheat_energy_full, SET_ENERGY_FULL);
         addEnergyRow();
+
+        currentSection = addSection("BUILD & SUPPORT", false);
+        fastBuild = addToggle(R.string.cheat_fast_build, SET_FAST_BUILD);
         noCooldown = addToggle(R.string.cheat_no_cooldown, SET_NO_COOLDOWN);
-        revealMap = addToggle(R.string.cheat_reveal_map, SET_REVEAL_MAP);
-        healthBars = addToggle(R.string.cheat_health_bars, SET_HEALTH_BARS);
+        buildAnywhere = addToggle(R.string.cheat_build_anywhere, SET_BUILD_ANYWHERE);
+
+        currentSection = addSection("COMBAT ENHANCEMENTS", false);
         damage = addToggle(R.string.cheat_damage, SET_DAMAGE);
         fireRate = addToggle(R.string.cheat_fire_rate, SET_FIRE_RATE);
         tough = addToggle(R.string.cheat_tough, SET_TOUGH);
         speed = addToggle(R.string.cheat_speed, SET_SPEED);
         elite = addToggle(R.string.cheat_elite, SET_ELITE);
         airAmmo = addToggle(R.string.cheat_air_ammo, SET_AIR_AMMO);
-        buildAnywhere = addToggle(R.string.cheat_build_anywhere, SET_BUILD_ANYWHERE);
-        npcStop = addToggle("NPC STOP (ALLY + ENEMY)", SET_NPC_STOP);
-        autoHealUnits = addToggle("AUTO HEAL UNITS", SET_AUTO_HEAL_UNITS);
-        autoRepairAll = addToggle("AUTO REPAIR UNITS / BUILDINGS", SET_AUTO_REPAIR_ALL);
+
+        currentSection = addSection("TURRET & WEAPON CONTROL", false);
         turretFireSpeed = addToggle("TURRET FIRE SPEED X3", SET_TURRET_FIRE_SPEED);
         turretRange = addToggle("TURRET RANGE X2", SET_TURRET_RANGE);
         turretDetection = addToggle("TURRET DETECTION X2", SET_TURRET_DETECTION);
+
+        currentSection = addSection("MAP & INFORMATION", false);
+        revealMap = addToggle(R.string.cheat_reveal_map, SET_REVEAL_MAP);
+        healthBars = addToggle(R.string.cheat_health_bars, SET_HEALTH_BARS);
+
+        currentSection = addSection("UNIT & AI CONTROL", false);
+        npcStop = addToggle("NPC STOP (ALLY + ENEMY)", SET_NPC_STOP);
+        autoHealUnits = addToggle("AUTO HEAL UNITS", SET_AUTO_HEAL_UNITS);
+        autoRepairAll = addToggle("AUTO REPAIR UNITS / BUILDINGS", SET_AUTO_REPAIR_ALL);
+
+        currentSection = addSection("INSTANT ACTIONS", false);
         addActionRow();
+        currentSection = null;
+        addDisableAllButton();
 
         TextView note = new TextView(activity);
         note.setText(R.string.cheat_note);
@@ -319,11 +416,13 @@ final class CheatMenu {
     /** One row: a label and a big colored ON / OFF chip. Tap anywhere on the row to flip it. */
     private final class ToggleRow {
         private final TextView chip;
+        private final int id;
         private boolean on;
 
         ToggleRow(int labelRes, final int id) { this(activity.getText(labelRes), id); }
 
         ToggleRow(CharSequence labelText, final int id) {
+            this.id = id;
             LinearLayout row = new LinearLayout(activity);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
@@ -342,6 +441,7 @@ final class CheatMenu {
             chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             row.addView(chip, new LinearLayout.LayoutParams(dp(60), dp(32)));
             setOn(false);
+            toggleRows.add(this);
 
             View.OnClickListener flip = new View.OnClickListener() {
                 @Override public void onClick(View v) {
@@ -351,7 +451,7 @@ final class CheatMenu {
             };
             row.setOnClickListener(flip);
             chip.setOnClickListener(flip);
-            panel.addView(row);
+            addCurrentRow(row);
 
             View divider = new View(activity);
             divider.setBackgroundColor(0x334D6479);
@@ -366,6 +466,11 @@ final class CheatMenu {
             on = value;
             chip.setText(value ? "ON" : "OFF");
             setChipColor(chip, value ? COLOR_ON : COLOR_OFF);
+        }
+
+        void disable() {
+            setOn(false);
+            set(id, 0);
         }
     }
 
@@ -405,7 +510,7 @@ final class CheatMenu {
         });
         row.addView(plus, new LinearLayout.LayoutParams(dp(40), dp(32)));
 
-        panel.addView(row);
+        addCurrentRow(row);
     }
 
     /** Two one-shot buttons: add Generals points, and jump to the highest rank. */
@@ -429,7 +534,7 @@ final class CheatMenu {
         });
         row.addView(rank, new LinearLayout.LayoutParams(0, dp(36), 1f));
 
-        panel.addView(row);
+        addCurrentRow(row);
 
         // One-shot engine action; no fake toggle/state is shown.
         LinearLayout repairRow = new LinearLayout(activity);
@@ -440,7 +545,7 @@ final class CheatMenu {
             @Override public void onClick(View v) { runAction(ACT_REPAIR_ALL_BUILDINGS, 0); }
         });
         repairRow.addView(repair, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
-        panel.addView(repairRow);
+        addCurrentRow(repairRow);
 
         LinearLayout captureRow = new LinearLayout(activity);
         captureRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -450,7 +555,7 @@ final class CheatMenu {
             @Override public void onClick(View v) { runAction(ACT_INSTANT_CAPTURE, 0); }
         });
         captureRow.addView(instantCapture, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
-        panel.addView(captureRow);
+        addCurrentRow(captureRow);
 
         LinearLayout healRepairRow = new LinearLayout(activity);
         healRepairRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -460,7 +565,7 @@ final class CheatMenu {
             @Override public void onClick(View v) { runAction(ACT_HEAL_REPAIR_ALL, 0); }
         });
         healRepairRow.addView(healRepair, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
-        panel.addView(healRepairRow);
+        addCurrentRow(healRepairRow);
     }
 
     /** A one-shot action; the engine applies it on its own thread. Tells the player if it could not run. */
