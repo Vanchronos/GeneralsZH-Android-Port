@@ -51,6 +51,7 @@ import java.util.List;
 final class CheatMenu {
 
     private static final String TAG = "GXCheatMenu";
+    // CYBER_HYBRID_UI_V2_APPLIED: presentation-only upgrade.
 
     // Keep in step with the ids in Common/GXCheats.h (the JNI pair is generic).
     private static final int SET_MAX_MONEY = 0;
@@ -87,10 +88,12 @@ final class CheatMenu {
     private static final int ENERGY_STEP = 100;  // kW per tap on + / -
     private static final int ENERGY_MAX = 2000;
 
-    // Refined tactical palette; gameplay and JNI IDs are unchanged.
-    private static final int COLOR_ON = 0xFF269B63;
-    private static final int COLOR_OFF = 0xFF536477;
-    private static final int COLOR_BUTTON = 0xFF263B50;
+    // CYBER_HYBRID_UI_V2 palette: cyan glass, deep navy, active neon green.
+    private static final int COLOR_ON = 0xFF17A875;
+    private static final int COLOR_OFF = 0xFF34465B;
+    private static final int COLOR_BUTTON = 0xFF17364D;
+    private static final int COLOR_CYAN = 0xFF24CFE8;
+    private static final int COLOR_ACTION = 0xFF126C89;
 
     private final Activity activity;
     private final ViewGroup parent;
@@ -100,6 +103,16 @@ final class CheatMenu {
     private ScrollView panelRoot;
     private LinearLayout panel;
     private LinearLayout currentSection;
+    private TextView activeCountText;
+    private TextView minimizeButton;
+    private TextView disableAllButton;
+    private TextView noteText;
+    private int expandedPanelHeight;
+    private boolean compactMode;
+    private final List<LinearLayout> sectionContents = new ArrayList<>();
+    private final List<TextView> sectionHeadings = new ArrayList<>();
+    private final List<boolean[]> sectionExpandedStates = new ArrayList<>();
+    private final List<String> sectionTitles = new ArrayList<>();
     private final List<ToggleRow> toggleRows = new ArrayList<>();
     private TextView statusText;
     private ToggleRow maxMoney;
@@ -203,22 +216,26 @@ final class CheatMenu {
         content.setVisibility(expandedInitially ? View.VISIBLE : View.GONE);
 
         final boolean[] expanded = new boolean[] { expandedInitially };
+        sectionContents.add(content);
+        sectionExpandedStates.add(expanded);
+        sectionTitles.add(titleText);
         final TextView heading = new TextView(activity);
-        heading.setText((expanded[0] ? "▼  " : "▶  ") + titleText);
-        heading.setTextColor(0xFFE7F0F8);
+        sectionHeadings.add(heading);
+        heading.setText((expanded[0] ? "▾  " : "▸  ") + titleText.toUpperCase(java.util.Locale.ROOT));
+        heading.setTextColor(0xFF8DEEFF);
         heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         heading.setTypeface(null, Typeface.BOLD);
         heading.setGravity(Gravity.CENTER_VERTICAL);
-        heading.setPadding(dp(10), dp(8), dp(10), dp(8));
-        heading.setMinHeight(dp(36));
+        heading.setPadding(dp(12), dp(8), dp(12), dp(8));
+        heading.setMinHeight(dp(40));
         heading.setClickable(true);
         GradientDrawable headerBg = new GradientDrawable(
             GradientDrawable.Orientation.LEFT_RIGHT,
-            new int[] { 0xFF223747, 0xFF192633 });
-        headerBg.setCornerRadius(dp(8));
-        headerBg.setStroke(dp(1), 0xFF3D6579);
+            new int[] { 0xFF173D54, 0xFF142B3D, 0xFF101B2B });
+        headerBg.setCornerRadius(dp(9));
+        headerBg.setStroke(dp(1), 0xFF29CFE8);
         heading.setBackground(headerBg);
-        heading.setElevation(dp(1));
+        heading.setElevation(dp(2));
 
         LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -232,7 +249,7 @@ final class CheatMenu {
             @Override public void onClick(View v) {
                 expanded[0] = !expanded[0];
                 content.setVisibility(expanded[0] ? View.VISIBLE : View.GONE);
-                heading.setText((expanded[0] ? "▼  " : "▶  ") + titleText);
+                heading.setText((expanded[0] ? "▾  " : "▸  ") + titleText.toUpperCase(java.util.Locale.ROOT));
             }
         });
         return content;
@@ -244,9 +261,15 @@ final class CheatMenu {
         target.addView(row);
     }
 
+    private void addCurrentRow(View row, LinearLayout.LayoutParams params) {
+        LinearLayout target = currentSection != null ? currentSection : panel;
+        target.addView(row, params);
+    }
+
     /** Turns off toggle controls only. One-shot actions and the energy +/- amount are not executed. */
     private void addDisableAllButton() {
         TextView disableAll = makeChip("DISABLE ALL TOGGLES");
+        disableAllButton = disableAll;
         GradientDrawable bg = new GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
             new int[] { 0xFF75404A, 0xFF4A252E });
@@ -272,9 +295,107 @@ final class CheatMenu {
         });
     }
 
+    private void styleHeaderButton(TextView button, int fill, int stroke) {
+        GradientDrawable background = new GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[] { lighten(fill, 0.14f), darken(fill, 0.12f) });
+        background.setCornerRadius(dp(8));
+        background.setStroke(dp(1), stroke);
+        button.setBackground(background);
+        button.setTextColor(0xFFF4FBFF);
+        button.setTypeface(Typeface.DEFAULT_BOLD);
+        button.setElevation(dp(2));
+    }
+
+    private void updateActiveCount() {
+        int active = 0;
+        for (ToggleRow row : toggleRows) if (row.isOn()) active++;
+        if (activeCountText != null) {
+            activeCountText.setText("ACTIVE  " + active + "/" + toggleRows.size());
+        }
+        if (toggleButton != null) {
+            GradientDrawable floating = new GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                active > 0
+                    ? new int[] { 0xF12ADCA0, 0xF012795C }
+                    : new int[] { 0xF12AD7EE, 0xF015597A });
+            floating.setCornerRadius(dp(12));
+            floating.setStroke(dp(1), active > 0 ? 0xFF8BFFD0 : 0xFF7AF1FF);
+            toggleButton.setBackground(floating);
+            toggleButton.setElevation(dp(active > 0 ? 9 : 6));
+        }
+    }
+
+    private void setCompactMode(boolean compact) {
+        compactMode = compact;
+        for (int i = 0; i < sectionContents.size(); i++) {
+            if (compactMode) {
+                sectionHeadings.get(i).setVisibility(View.GONE);
+                sectionContents.get(i).setVisibility(View.GONE);
+            } else {
+                sectionHeadings.get(i).setVisibility(View.VISIBLE);
+                sectionContents.get(i).setVisibility(
+                    sectionExpandedStates.get(i)[0] ? View.VISIBLE : View.GONE);
+            }
+        }
+        if (disableAllButton != null) disableAllButton.setVisibility(compactMode ? View.GONE : View.VISIBLE);
+        if (noteText != null) noteText.setVisibility(compactMode ? View.GONE : View.VISIBLE);
+        if (minimizeButton != null) {
+            minimizeButton.setText(compactMode ? "+" : "−");
+            minimizeButton.setContentDescription(compactMode ? "Restore cheat panel" : "Minimize cheat panel");
+        }
+        if (panelRoot != null) {
+            ViewGroup.LayoutParams raw = panelRoot.getLayoutParams();
+            if (raw instanceof RelativeLayout.LayoutParams) {
+                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) raw;
+                params.height = compactMode ? dp(146) : expandedPanelHeight;
+                panelRoot.setLayoutParams(params);
+            }
+            panelRoot.scrollTo(0, 0);
+            panelRoot.requestLayout();
+        }
+    }
+
+    private void installPanelDrag(final View handle) {
+        handle.setOnTouchListener(new View.OnTouchListener() {
+            private float downX, downY;
+            private int startLeft, startTop;
+            private boolean moved;
+            @Override public boolean onTouch(View v, MotionEvent event) {
+                if (panelRoot == null || !(panelRoot.getLayoutParams() instanceof RelativeLayout.LayoutParams))
+                    return false;
+                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) panelRoot.getLayoutParams();
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downX = event.getRawX(); downY = event.getRawY();
+                        startLeft = params.leftMargin; startTop = params.topMargin;
+                        moved = false;
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        float dx = event.getRawX() - downX;
+                        float dy = event.getRawY() - downY;
+                        if (Math.abs(dx) > dp(5) || Math.abs(dy) > dp(5)) moved = true;
+                        if (moved) {
+                            int maxLeft = Math.max(0, parent.getWidth() - panelRoot.getWidth());
+                            int maxTop = Math.max(0, parent.getHeight() - panelRoot.getHeight());
+                            params.leftMargin = Math.max(0, Math.min(maxLeft, startLeft + (int) dx));
+                            params.topMargin = Math.max(0, Math.min(maxTop, startTop + (int) dy));
+                            panelRoot.setLayoutParams(params);
+                        }
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        return true;
+                    default:
+                        return true;
+                }
+            }
+        });
+    }
+
     private void build() {
         toggleButton = new TextView(activity);
-        toggleButton.setText("CHEAT");
+        toggleButton.setText("◆ CHEAT");
         toggleButton.setTextColor(Color.WHITE);
         toggleButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         toggleButton.setTypeface(null, Typeface.BOLD);
@@ -283,12 +404,12 @@ final class CheatMenu {
         toggleButton.setAlpha(0.98f);
         GradientDrawable chip = new GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[] { 0xF13FAE75, 0xF01B6746 });
-        chip.setStroke(dp(1), 0xFF9BE8B8);
-        chip.setCornerRadius(dp(10));
+            new int[] { 0xF12AD7EE, 0xF015597A });
+        chip.setStroke(dp(1), 0xFF7AF1FF);
+        chip.setCornerRadius(dp(12));
         toggleButton.setBackground(chip);
-        toggleButton.setElevation(dp(5));
-        RelativeLayout.LayoutParams buttonParams = new RelativeLayout.LayoutParams(dp(56), dp(32));
+        toggleButton.setElevation(dp(8));
+        RelativeLayout.LayoutParams buttonParams = new RelativeLayout.LayoutParams(dp(88), dp(36));
         buttonParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
         buttonParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
         buttonParams.leftMargin = dp(8);
@@ -300,49 +421,113 @@ final class CheatMenu {
         panel.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable card = new GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[] { 0xF01B2938, 0xF00D141E });
-        card.setStroke(dp(1), 0xFF49677D);
-        card.setCornerRadius(dp(14));
+            new int[] { 0xF21A2940, 0xF10A1222 });
+        card.setStroke(dp(1), 0xFF2BCFEA);
+        card.setCornerRadius(dp(16));
         panel.setBackground(card);
         panel.setElevation(dp(8));
         panel.setClickable(true); // swallow touches so they do not reach the game underneath
-        int pad = dp(12);
+        int pad = dp(14);
         panel.setPadding(pad, pad, pad, pad);
 
-        TextView title = new TextView(activity);
-        title.setText(R.string.cheat_title);
-        title.setTextColor(0xFFF2F7FC);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setShadowLayer(1.5f, 0, dp(1), 0x4438D996);
-        title.setPadding(dp(2), dp(1), dp(2), dp(3));
-        panel.addView(title);
+        // CYBER_HYBRID_UI_V2: branded, draggable header and compact control buttons.
+        final LinearLayout dragHandle = new LinearLayout(activity);
+        dragHandle.setOrientation(LinearLayout.VERTICAL);
+        dragHandle.setGravity(Gravity.CENTER_VERTICAL);
+        dragHandle.setPadding(dp(2), dp(1), dp(2), dp(1));
+        dragHandle.setClickable(true);
 
-        // A small accent bar polishes the existing header without changing its layout.
+        TextView title = new TextView(activity);
+        title.setText("GENERALS X");
+        title.setTextColor(0xFFF4FBFF);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        title.setShadowLayer(4f, 0, 0, 0x5531DDF4);
+        title.setLetterSpacing(0.04f);
+        dragHandle.addView(title, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        TextView subtitle = new TextView(activity);
+        subtitle.setText("TACTICAL COMMAND  //  CYBER-HYBRID");
+        subtitle.setTextColor(0xFF71D9EC);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+        subtitle.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        subtitle.setPadding(0, dp(1), 0, 0);
+        dragHandle.addView(subtitle, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        LinearLayout topBar = new LinearLayout(activity);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams dragParams = new LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        topBar.addView(dragHandle, dragParams);
+
+        LinearLayout headerControls = new LinearLayout(activity);
+        headerControls.setOrientation(LinearLayout.HORIZONTAL);
+        headerControls.setGravity(Gravity.CENTER_VERTICAL);
+        minimizeButton = makeChip("−");
+        minimizeButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        styleHeaderButton(minimizeButton, COLOR_CYAN, 0xFF2BD5EC);
+        headerControls.addView(minimizeButton, new LinearLayout.LayoutParams(dp(34), dp(32)));
+        TextView closeButton = makeChip("×");
+        closeButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        styleHeaderButton(closeButton, 0xFF963D59, 0xFFFF86A5);
+        LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(dp(34), dp(32));
+        closeParams.leftMargin = dp(5);
+        headerControls.addView(closeButton, closeParams);
+        topBar.addView(headerControls, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        panel.addView(topBar);
+
         View accent = new View(activity);
-        GradientDrawable accentShape = new GradientDrawable();
-        accentShape.setColor(0xFF4DD28B);
+        GradientDrawable accentShape = new GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            new int[] { 0xFF2EE6F4, 0xFF31D59B, 0x0031D59B });
         accentShape.setCornerRadius(dp(2));
         accent.setBackground(accentShape);
         LinearLayout.LayoutParams accentParams =
-            new LinearLayout.LayoutParams(dp(42), dp(3));
-        accentParams.bottomMargin = dp(7);
+            new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3));
+        accentParams.topMargin = dp(7);
+        accentParams.bottomMargin = dp(8);
         panel.addView(accent, accentParams);
 
+        LinearLayout statusRow = new LinearLayout(activity);
+        statusRow.setOrientation(LinearLayout.HORIZONTAL);
+        statusRow.setGravity(Gravity.CENTER_VERTICAL);
         statusText = new TextView(activity);
-        statusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        statusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         statusText.setTextColor(0xFFFFC36A);
-        statusText.setPadding(dp(8), dp(5), dp(8), dp(5));
-        GradientDrawable statusPill = new GradientDrawable();
-        statusPill.setColor(0xFF283342);
-        statusPill.setStroke(dp(1), 0xFF405367);
+        statusText.setMaxLines(2);
+        statusText.setPadding(dp(9), dp(7), dp(9), dp(7));
+        GradientDrawable statusPill = new GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            new int[] { 0xFF1A3448, 0xFF182333 });
+        statusPill.setStroke(dp(1), 0xFF3A687D);
         statusPill.setCornerRadius(dp(8));
         statusText.setBackground(statusPill);
-        LinearLayout.LayoutParams statusParams =
-            new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        statusParams.bottomMargin = dp(7);
-        panel.addView(statusText, statusParams);
+        statusRow.addView(statusText, new LinearLayout.LayoutParams(0,
+            ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        activeCountText = makeChip("ACTIVE  0/0");
+        activeCountText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        setChipColor(activeCountText, COLOR_ACTION);
+        LinearLayout.LayoutParams countParams = new LinearLayout.LayoutParams(dp(96), dp(30));
+        countParams.leftMargin = dp(6);
+        statusRow.addView(activeCountText, countParams);
+        LinearLayout.LayoutParams statusRowParams = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        statusRowParams.bottomMargin = dp(7);
+        panel.addView(statusRow, statusRowParams);
+
+        minimizeButton.setContentDescription("Minimize or restore cheat panel");
+        minimizeButton.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { setCompactMode(!compactMode); }
+        });
+        closeButton.setContentDescription("Close cheat panel");
+        closeButton.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { closePanel(); }
+        });
+
 
         // Compact tactical categories. Existing ToggleRow objects and native IDs remain unchanged.
         currentSection = addSection("ECONOMY & POWER", true);
@@ -383,12 +568,13 @@ final class CheatMenu {
         currentSection = null;
         addDisableAllButton();
 
-        TextView note = new TextView(activity);
-        note.setText(R.string.cheat_note);
-        note.setTextColor(0xFF9AA0A6);
-        note.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        note.setPadding(0, dp(8), 0, 0);
-        panel.addView(note);
+        noteText = new TextView(activity);
+        noteText.setText("GX // TACTICAL OVERLAY  •  SINGLE PLAYER");
+        noteText.setTextColor(0xFF6C9CAA);
+        noteText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+        noteText.setTypeface(Typeface.MONOSPACE, Typeface.NORMAL);
+        noteText.setPadding(dp(2), dp(9), dp(2), dp(2));
+        panel.addView(noteText);
 
         panelRoot = new ScrollView(activity);
         panelRoot.setFillViewport(false);
@@ -398,17 +584,19 @@ final class CheatMenu {
         panelRoot.setBackgroundColor(Color.TRANSPARENT);
         panelRoot.addView(panel);
         int screenWidth = activity.getResources().getDisplayMetrics().widthPixels;
-        int panelWidth = Math.min(dp(310), Math.max(dp(220), screenWidth - dp(86)));
+        int screenHeight = activity.getResources().getDisplayMetrics().heightPixels;
+        int panelWidth = Math.min(dp(430), Math.max(dp(250), screenWidth - dp(100)));
+        expandedPanelHeight = Math.min(dp(620), Math.max(dp(250), screenHeight - dp(48)));
         RelativeLayout.LayoutParams panelParams =
-            new RelativeLayout.LayoutParams(panelWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
+            new RelativeLayout.LayoutParams(panelWidth, expandedPanelHeight);
         panelParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
         panelParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
         panelParams.leftMargin = dp(70);
-        panelParams.topMargin = dp(20);
-        panelParams.bottomMargin = dp(20);
+        panelParams.topMargin = dp(16);
+        panelParams.bottomMargin = dp(16);
         panelRoot.setVisibility(View.GONE);
         parent.addView(panelRoot, panelParams);
-
+        installPanelDrag(dragHandle);
         updateEnergyLabel();
         refresh();
     }
@@ -427,7 +615,13 @@ final class CheatMenu {
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
             row.setMinimumHeight(dp(44));
-            row.setPadding(dp(4), dp(1), 0, dp(1));
+            row.setPadding(dp(8), dp(3), dp(6), dp(3));
+            GradientDrawable rowCard = new GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[] { 0x2032A9CC, 0x120C1C2B });
+            rowCard.setCornerRadius(dp(8));
+            rowCard.setStroke(dp(1), 0x243BC9E8);
+            row.setBackground(rowCard);
             row.setClickable(true);
 
             TextView label = new TextView(activity);
@@ -439,7 +633,7 @@ final class CheatMenu {
 
             chip = makeChip("OFF");
             chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            row.addView(chip, new LinearLayout.LayoutParams(dp(60), dp(32)));
+            row.addView(chip, new LinearLayout.LayoutParams(dp(76), dp(32)));
             setOn(false);
             toggleRows.add(this);
 
@@ -447,6 +641,7 @@ final class CheatMenu {
                 @Override public void onClick(View v) {
                     setOn(!on);
                     set(id, on ? 1 : 0);
+                    updateActiveCount();
                 }
             };
             row.setOnClickListener(flip);
@@ -459,19 +654,22 @@ final class CheatMenu {
                 new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
             dividerParams.topMargin = dp(1);
             dividerParams.bottomMargin = dp(1);
-            panel.addView(divider, dividerParams);
+            addCurrentRow(divider, dividerParams);
         }
 
         void setOn(boolean value) {
             on = value;
-            chip.setText(value ? "ON" : "OFF");
+            chip.setText(value ? "ACTIVE" : "OFF");
             setChipColor(chip, value ? COLOR_ON : COLOR_OFF);
+            chip.setElevation(dp(value ? 4 : 1));
         }
 
         void disable() {
             setOn(false);
             set(id, 0);
         }
+
+        boolean isOn() { return on; }
     }
 
     private ToggleRow addToggle(int labelRes, int id) {
@@ -521,6 +719,7 @@ final class CheatMenu {
         row.setPadding(0, dp(6), 0, dp(2));
 
         TextView points = makeChip(activity.getString(R.string.cheat_add_points, GENERAL_POINTS_PER_TAP));
+        setChipColor(points, COLOR_ACTION);
         points.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { runAction(ACT_ADD_GENERAL_POINTS, GENERAL_POINTS_PER_TAP); }
         });
@@ -529,6 +728,7 @@ final class CheatMenu {
         row.addView(points, pointsParams);
 
         TextView rank = makeChip(activity.getString(R.string.cheat_max_rank));
+        setChipColor(rank, COLOR_ACTION);
         rank.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { runAction(ACT_MAX_RANK, 0); }
         });
@@ -541,6 +741,7 @@ final class CheatMenu {
         repairRow.setOrientation(LinearLayout.HORIZONTAL);
         repairRow.setPadding(0, dp(2), 0, dp(2));
         TextView repair = makeChip(activity.getString(R.string.cheat_repair_all_buildings));
+        setChipColor(repair, COLOR_ACTION);
         repair.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { runAction(ACT_REPAIR_ALL_BUILDINGS, 0); }
         });
@@ -551,6 +752,7 @@ final class CheatMenu {
         captureRow.setOrientation(LinearLayout.HORIZONTAL);
         captureRow.setPadding(0, dp(2), 0, dp(2));
         TextView instantCapture = makeChip(activity.getString(R.string.cheat_instant_capture));
+        setChipColor(instantCapture, COLOR_ACTION);
         instantCapture.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { runAction(ACT_INSTANT_CAPTURE, 0); }
         });
@@ -561,6 +763,7 @@ final class CheatMenu {
         healRepairRow.setOrientation(LinearLayout.HORIZONTAL);
         healRepairRow.setPadding(0, dp(2), 0, dp(2));
         TextView healRepair = makeChip("HEAL / REPAIR ALL");
+        setChipColor(healRepair, COLOR_ACTION);
         healRepair.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { runAction(ACT_HEAL_REPAIR_ALL, 0); }
         });
@@ -608,8 +811,9 @@ final class CheatMenu {
         GradientDrawable g = new GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
             new int[] { lighten(color, 0.12f), darken(color, 0.08f) });
-        int stroke = color == COLOR_ON ? 0xFF55C98B
-            : (color == COLOR_OFF ? 0xFF71859A : 0xFF40596E);
+        int stroke = color == COLOR_ON ? 0xFF59F0B1
+            : (color == COLOR_OFF ? 0xFF71889E
+            : (color == COLOR_ACTION ? 0xFF45DFF4 : 0xFF3C7A97));
         g.setStroke(dp(1), stroke);
         g.setCornerRadius(dp(9));
         t.setBackground(g);
@@ -647,8 +851,10 @@ final class CheatMenu {
                         float dx = e.getRawX() - downX, dy = e.getRawY() - downY;
                         if (Math.abs(dx) > dp(6) || Math.abs(dy) > dp(6)) dragged = true;
                         if (dragged) {
-                            lp.leftMargin = Math.max(0, (int) (startLeft + dx));
-                            lp.topMargin = Math.max(0, (int) (startTop + dy));
+                            int maxLeft = Math.max(0, parent.getWidth() - v.getWidth());
+                            int maxTop = Math.max(0, parent.getHeight() - v.getHeight());
+                            lp.leftMargin = Math.max(0, Math.min(maxLeft, (int) (startLeft + dx)));
+                            lp.topMargin = Math.max(0, Math.min(maxTop, (int) (startTop + dy)));
                             v.setLayoutParams(lp);
                         }
                         return true;
@@ -710,6 +916,7 @@ final class CheatMenu {
         turretRange.setOn((flags & 524288) != 0);
         turretDetection.setOn((flags & 1048576) != 0);
         updateEnergyLabel();
+        updateActiveCount();
     }
 
     private int dp(int value) {
