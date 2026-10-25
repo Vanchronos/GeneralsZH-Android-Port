@@ -619,6 +619,7 @@ set(GAMEENGINE_SRC
     Source/Common/RTS/Handicap.cpp
     Source/Common/RTS/MissionStats.cpp
     Source/Common/RTS/Money.cpp
+    Source/Common/GXCheats.cpp
     Source/Common/RTS/Player.cpp
     Source/Common/RTS/PlayerList.cpp
     Source/Common/RTS/PlayerTemplate.cpp

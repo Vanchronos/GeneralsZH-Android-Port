@@ -29,6 +29,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include "Common/GXCheats.h"
 
 #define DEFINE_VETERANCY_NAMES
 #include "Common/Upgrade.h"
@@ -154,6 +155,10 @@ UpgradeTemplate::~UpgradeTemplate()
 //-------------------------------------------------------------------------------------------------
 Int UpgradeTemplate::calcTimeToBuild( Player *player ) const
 {
+	// GXCHEAT:fast-build-upgrade  GeneralsX @feature Android cheat menu: fast build, local human player only
+	if( GXCheats::fastBuild( player ) )
+		return 1;
+
 #if defined(RTS_DEBUG) || defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)
 	if( player->buildsInstantly() )
 	{

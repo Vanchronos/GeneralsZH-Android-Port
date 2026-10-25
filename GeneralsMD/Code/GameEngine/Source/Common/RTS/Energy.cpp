@@ -43,6 +43,7 @@
 //-----------------------------------------------------------------------------
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include "Common/GXCheats.h"
 
 #include "Common/Energy.h"
 #include "Common/Player.h"
@@ -67,6 +68,15 @@ Energy::Energy()
 //-----------------------------------------------------------------------------
 Int Energy::getProduction() const
 {
+	// GXCHEAT:energy-production  GeneralsX @feature Android cheat menu: extra kW / immune to sabotage (local human only)
+	if( GXCheats::appliesTo( m_owner ) )
+	{
+		const Int gxBonus = GXCheats::energyBonus( m_owner );
+		if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame && !GXCheats::energyFull( m_owner ) )
+			return gxBonus;
+		return m_energyProduction + gxBonus;
+	}
+
 	if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
 	{
 		//Power sabotaged, therefore no power.
@@ -78,6 +88,19 @@ Int Energy::getProduction() const
 //-----------------------------------------------------------------------------
 Real Energy::getEnergySupplyRatio() const
 {
+	// GXCHEAT:energy-ratio
+	if( GXCheats::appliesTo( m_owner ) )
+	{
+		if( GXCheats::energyFull( m_owner ) )
+			return 1.0f;
+		if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
+			return 0.0f;
+		const Int gxProduction = getProduction();
+		if( m_energyConsumption == 0 )
+			return (Real)gxProduction;
+		return (Real)gxProduction / (Real)m_energyConsumption;
+	}
+
 	DEBUG_ASSERTCRASH(m_energyProduction >= 0 && m_energyConsumption >= 0, ("neg Energy numbers"));
 
 	if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
@@ -95,6 +118,16 @@ Real Energy::getEnergySupplyRatio() const
 //-------------------------------------------------------------------------------------------------
 Bool Energy::hasSufficientPower() const
 {
+	// GXCHEAT:energy-sufficient
+	if( GXCheats::appliesTo( m_owner ) )
+	{
+		if( GXCheats::energyFull( m_owner ) )
+			return TRUE;
+		if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
+			return FALSE;
+		return getProduction() >= m_energyConsumption;
+	}
+
 	if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
 	{
 		//Power sabotaged, therefore no power.

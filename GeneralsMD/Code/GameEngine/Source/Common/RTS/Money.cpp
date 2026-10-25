@@ -43,6 +43,7 @@
 //-----------------------------------------------------------------------------
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include "Common/GXCheats.h"
 #include "Common/Money.h"
 
 #include "Common/AudioSettings.h"
@@ -56,6 +57,10 @@
 // ------------------------------------------------------------------------------------------------
 UnsignedInt Money::withdraw(UnsignedInt amountToWithdraw, Bool playSound)
 {
+	// GXCHEAT:money-withdraw  GeneralsX @feature Android cheat menu: money does not decrease (local human player only)
+	if ((GXCheats::getFlags() & 2) != 0 && GXCheats::appliesToIndex(m_playerIndex))
+		return 0;
+
 #if defined(RTS_DEBUG)
 	Player* player = ThePlayerList->getNthPlayer(m_playerIndex);
 	if (player != nullptr && player->buildsForFree())

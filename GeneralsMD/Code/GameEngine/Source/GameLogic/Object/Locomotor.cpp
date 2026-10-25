@@ -796,7 +796,7 @@ Real Locomotor::getMaxSpeedForCondition(BodyDamageType condition) const
 	if (speed > m_maxSpeed)
 		speed = m_maxSpeed;
 
-	return speed;
+	return speed * m_gxSpeedScale; // GXCHEAT:locomotor-speed
 }
 
 //-------------------------------------------------------------------------------------------------

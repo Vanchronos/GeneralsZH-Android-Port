@@ -58,6 +58,13 @@ import java.io.OutputStream;
 
 public class GeneralsZHActivity extends SDLActivity {
 
+    // GXCHEAT:activity-fields  GeneralsX @feature Android cheat menu: floating cheat menu and its native entry points
+    // (implemented in GXCheats.cpp). An engine without them throws UnsatisfiedLinkError, which CheatMenu catches.
+    private CheatMenu cheatMenu;
+
+    static native void nativeCheatSet(int id, int value);
+    static native int nativeCheatQuery(int id);
+
     private static final String TAG = "GeneralsZH";
 
     // GeneralsX @feature Android port 23/09/2026 Launch options from the Replay check
@@ -419,6 +426,11 @@ public class GeneralsZHActivity extends SDLActivity {
         }
 
         super.onCreate(savedInstanceState);
+
+        // GXCHEAT:activity-create  mLayout exists once SDLActivity.onCreate has run.
+        if (mLayout != null && cheatMenu == null) {
+            cheatMenu = new CheatMenu(this, mLayout);
+        }
     }
 
     // GeneralsX @bugfix Android port 02/08/2026 A tester reported the camera

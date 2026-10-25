@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include "Common/GXCheats.h"
 
 #include <Utility/intrin_compat.h>	// For _isnan compatibility
 #include <stdio.h>
@@ -3882,8 +3883,8 @@ void Drawable::drawHealthBar(const IRegion2D* healthBarRegion)
 	// only draw health for selected drawables and drawables that have been moused over
 	// by the cursor
 	//
-	if( TheGlobalData->m_showObjectHealth &&
-			(isSelected() || (TheInGameUI && (TheInGameUI->getMousedOverDrawableID() == getID()))) )
+	if( (TheGlobalData->m_showObjectHealth || GXCheats::healthBarsAlways()) /* GXCHEAT:health-bars */ &&
+			(GXCheats::healthBarsAlways() || isSelected() || (TheInGameUI && (TheInGameUI->getMousedOverDrawableID() == getID()))) )
 	{
 		Object *obj = getObject();
 

@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include "Common/GXCheats.h"
 
 #define DEFINE_DEATH_NAMES
 #define DEFINE_WEAPONBONUSCONDITION_NAMES
@@ -1957,6 +1958,9 @@ void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraB
 	const WeaponBonusSet* extra = m_template->getExtraBonus();
 	if (extra)
 		extra->appendBonuses(flags, bonus);
+
+	// GXCHEAT:weapon-bonus  GeneralsX @feature Android cheat menu: damage / fire-rate multiplier for the local human player's weapons only.
+	GXCheats::applyWeaponBonus( source->getControllingPlayer(), bonus );
 #if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
      // Fix v1 quad cannon damage this way for now
      const char* weaponName = m_template->getName().str();

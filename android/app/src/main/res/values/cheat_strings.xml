@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings of the single-player cheat pop-up (CheatMenu.java). Kept apart so the other
+     languages fall back to English / Indonesian without a MissingTranslation lint error. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="cheat_title">Cheat menu</string>
+    <string name="cheat_max_money">Max money</string>
+    <string name="cheat_freeze_money">Money does not decrease</string>
+    <string name="cheat_fast_build">Fast build</string>
+    <string name="cheat_energy_full">Full power (never low power)</string>
+    <string name="cheat_energy_bonus">Extra power: +%1$d kW</string>
+    <string name="cheat_status_ready">Active: your faction only</string>
+    <string name="cheat_status_unavailable">Not available: start a skirmish or campaign game</string>
+    <string name="cheat_status_no_native">ERROR: this engine build has no cheat functions (JNI not linked)</string>
+    <string name="cheat_note">Applies only to you. AI players (enemy and ally) are unaffected. Disabled in LAN/online matches and replays.</string>
+    <string name="cheat_no_cooldown">No cooldown (super powers)</string>
+    <string name="cheat_reveal_map">Reveal map</string>
+    <string name="cheat_health_bars">Health bars on all units</string>
+    <string name="cheat_add_points">+%1$d General points</string>
+    <string name="cheat_max_rank">Max rank</string>
+    <string name="cheat_action_sent">Done</string>
+    <string name="cheat_damage">Weapon damage x3</string>
+    <string name="cheat_fire_rate">Fire rate x3</string>
+    <string name="cheat_tough">Tough units (take 10% damage)</string>
+    <string name="cheat_speed">Unit speed x1.5</string>
+    <string name="cheat_elite">Units always max veterancy</string>
+    <string name="cheat_air_ammo">Aircraft never reload</string>
+</resources>

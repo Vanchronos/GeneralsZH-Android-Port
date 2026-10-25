@@ -43,6 +43,7 @@
 //-----------------------------------------------------------------------------
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include "Common/GXCheats.h"
 
 #define DEFINE_SCIENCE_AVAILABILITY_NAMES
 
@@ -669,6 +670,9 @@ void Player::addToPriorityBuildList(AsciiString templateName, Coord3D *pos, Real
 //=============================================================================
 void Player::update()
 {
+	// GXCHEAT:player-update  GeneralsX @feature Android cheat menu: no-op for every AI player and outside single-player
+	GXCheats::update(this);
+
 	if (m_ai)
 		m_ai->update();
 

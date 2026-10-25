@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include "Common/GXCheats.h"
 
 #define DEFINE_POWER_NAMES								// for PowerNames[]
 #define DEFINE_SHADOW_NAMES								// for TheShadowNames[]
@@ -1569,6 +1570,10 @@ Int ThingTemplate::calcCostToBuild( const Player* player) const
 //-------------------------------------------------------------------------------------------------
 Int ThingTemplate::calcTimeToBuild( const Player* player) const
 {
+	// GXCHEAT:fast-build-thing  GeneralsX @feature Android cheat menu: fast build, local human player only
+	if( GXCheats::fastBuild( player ) )
+		return 1;
+
 	Int buildTime = getBuildTime() * static_cast<float>(LOGICFRAMES_PER_SECOND);
 	buildTime *= player->getHandicap()->getHandicap(Handicap::BUILDTIME, this);
 

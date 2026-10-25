@@ -29,6 +29,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include "Common/GXCheats.h"
 
 #include "Common/GameAudio.h"
 #include "Common/GameUtility.h"
@@ -288,6 +289,14 @@ Bool SpecialPowerModule::isModuleForPower( const SpecialPowerTemplate *specialPo
 //-------------------------------------------------------------------------------------------------
 Bool SpecialPowerModule::isReady() const
 {
+	// GXCHEAT:special-ready  GeneralsX @feature Android cheat menu: no cooldown, local human player only.
+	// A paused power, or one in its 0xFFFFFFFF "busy launching" state, is left alone.
+	{
+		const Object* gxObj = getObject();
+		if ( gxObj && m_pausedCount == 0 && m_availableOnFrame != 0xFFFFFFFF && GXCheats::noCooldown( gxObj->getControllingPlayer() ) )
+			return TRUE;
+	}
+
 #if defined(RTS_DEBUG) || defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)
 	// this is a cheat ... remove this for release!
 	if( TheGlobalData->m_specialPowerUsesDelay == FALSE )

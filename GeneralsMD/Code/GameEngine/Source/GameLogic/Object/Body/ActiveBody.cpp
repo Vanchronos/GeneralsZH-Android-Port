@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include "Common/GXCheats.h"
 #include "Common/BitFlagsIO.h"
 #include "Common/CRCDebug.h"
 #include "Common/DamageFX.h"
@@ -368,6 +369,11 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 	Bool alreadyHandled = FALSE;
 	Bool allowModifier = TRUE;
 	Real amount = m_curArmor.adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount);
+
+	// GXCHEAT:body-damage  GeneralsX @feature Android cheat menu: "tough units" - the local human player's objects take less damage.
+	// Scripted armour-proof damage (sell, self-destruct, kill) is left alone.
+	if( damageInfo->in.m_damageType != DAMAGE_UNRESISTABLE && !damageInfo->in.m_kill )
+		amount *= GXCheats::damageTakenScale( getObject()->getControllingPlayer() );
 
 	switch( damageInfo->in.m_damageType )
 	{

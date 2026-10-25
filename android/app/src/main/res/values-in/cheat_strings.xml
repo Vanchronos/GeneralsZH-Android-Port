@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <!-- CheatMenu (pop-up cheat mode single-player) -->
+    <string name="cheat_title">Menu cheat</string>
+    <string name="cheat_max_money">Uang maksimal</string>
+    <string name="cheat_freeze_money">Uang tidak berkurang</string>
+    <string name="cheat_fast_build">Fast build</string>
+    <string name="cheat_energy_full">Daya penuh (tidak pernah low power)</string>
+    <string name="cheat_energy_bonus">Daya tambahan: +%1$d kW</string>
+    <string name="cheat_status_ready">Aktif: hanya untuk faksi kamu</string>
+    <string name="cheat_status_unavailable">Belum tersedia: mulai game skirmish atau campaign</string>
+    <string name="cheat_status_no_native">ERROR: engine ini tidak punya fungsi cheat (JNI tidak terhubung)</string>
+    <string name="cheat_note">Hanya berlaku untukmu. Pemain AI (musuh maupun teman) tidak terpengaruh. Nonaktif di match LAN/online dan replay.</string>
+    <string name="cheat_no_cooldown">Tanpa cooldown (super power)</string>
+    <string name="cheat_reveal_map">Buka seluruh peta</string>
+    <string name="cheat_health_bars">Health bar di semua unit</string>
+    <string name="cheat_add_points">+%1$d poin Jenderal</string>
+    <string name="cheat_max_rank">Rank maksimal</string>
+    <string name="cheat_action_sent">Selesai</string>
+    <string name="cheat_damage">Damage senjata x3</string>
+    <string name="cheat_fire_rate">Kecepatan tembak x3</string>
+    <string name="cheat_tough">Unit tahan banting (damage diterima 10%)</string>
+    <string name="cheat_speed">Kecepatan unit x1.5</string>
+    <string name="cheat_elite">Unit selalu veteran maksimal</string>
+    <string name="cheat_air_ammo">Pesawat tanpa isi ulang amunisi</string>
+</resources>
