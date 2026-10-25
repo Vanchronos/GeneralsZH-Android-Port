@@ -30,6 +30,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include "Common/GXCheats.h"
 
 #include "Common/BuildAssistant.h"
 #include "Common/GlobalData.h"
@@ -917,6 +918,11 @@ LegalBuildCode BuildAssistant::isLocationLegalToBuild( const Coord3D *worldPos,
 																											 UnsignedInt options,
 																											 const Object *builderObject,
 																											 Player *player)
+
+	// gx_cheat141_all_v1: bypass soft terrain/path restrictions for the local human only.
+	// NO_OBJECT_OVERLAP, shroud, supply and all other checks are deliberately preserved.
+	if( player != nullptr && GXCheats::buildAnywhere( player ) )
+		options &= ~(TERRAIN_RESTRICTIONS | CLEAR_PATH);
 {
 
 	/* You just can't never build off the map, regardless of options.  jba. */

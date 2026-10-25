@@ -17,6 +17,9 @@
     <string name="cheat_health_bars">Health bars on all units</string>
     <string name="cheat_add_points">+%1$d General points</string>
     <string name="cheat_max_rank">Max rank</string>
+    <string name="cheat_repair_all_buildings">Repair All Buildings</string>
+    <string name="cheat_instant_capture">Instant Capture (nearby)</string>
+    <string name="cheat_build_anywhere">Build Anywhere (keep no-overlap)</string>
     <string name="cheat_action_sent">Done</string>
     <string name="cheat_damage">Weapon damage x3</string>
     <string name="cheat_fire_rate">Fire rate x3</string>

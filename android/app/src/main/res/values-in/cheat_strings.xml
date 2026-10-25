@@ -16,6 +16,9 @@
     <string name="cheat_health_bars">Health bar di semua unit</string>
     <string name="cheat_add_points">+%1$d poin Jenderal</string>
     <string name="cheat_max_rank">Rank maksimal</string>
+    <string name="cheat_repair_all_buildings">Perbaiki Semua Bangunan</string>
+    <string name="cheat_instant_capture">Perebutan Instan (dekat unit)</string>
+    <string name="cheat_build_anywhere">Bangun di Mana Saja (tanpa tumpang tindih)</string>
     <string name="cheat_action_sent">Selesai</string>
     <string name="cheat_damage">Damage senjata x3</string>
     <string name="cheat_fire_rate">Kecepatan tembak x3</string>

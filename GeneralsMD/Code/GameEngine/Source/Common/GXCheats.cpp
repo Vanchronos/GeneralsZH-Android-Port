@@ -20,15 +20,18 @@
 #include "Common/GXCheats.h"
 
 #include "Common/Energy.h"
+#include "Common/ActionManager.h"
 #include "Common/Money.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
+#include "Common/SpecialPowerType.h"
 #include "Common/KindOf.h"
 #include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/RankInfo.h"
 #include "GameLogic/Weapon.h"
@@ -56,6 +59,9 @@ namespace
 	// because changing a Player from the Android UI thread would race with the game logic.
 	std::atomic<int>  s_pendingGeneralPoints( 0 );
 	std::atomic<bool> s_pendingMaxRank( false );
+	std::atomic<bool> s_pendingRepairAllBuildings( false ); // gx_repair_all_buildings_patch
+	std::atomic<bool> s_pendingInstantCapture( false ); // gx_cheat141_all_v1
+	std::atomic<bool> s_buildAnywhere( false );
 
 	// State that only the game thread touches.
 	int          s_lastEnergyKey = 0;
@@ -93,7 +99,8 @@ Int getFlags()
 		| (s_tough ? FLAG_TOUGH : 0)
 		| (s_speed ? FLAG_SPEED : 0)
 		| (s_elite ? FLAG_ELITE : 0)
-		| (s_airAmmo ? FLAG_AIR_AMMO : 0);
+		| (s_airAmmo ? FLAG_AIR_AMMO : 0)
+		| (s_buildAnywhere ? FLAG_BUILD_ANYWHERE : 0);
 }
 
 Int getEnergyBonus() { return s_energyBonus; }
@@ -134,6 +141,7 @@ void set( Int id, Int value )
 		case SET_SPEED:        s_speed = value != 0; break;
 		case SET_ELITE:        s_elite = value != 0; break;
 		case SET_AIR_AMMO:     s_airAmmo = value != 0; break;
+		case SET_BUILD_ANYWHERE: s_buildAnywhere = value != 0; break;
 		case ACT_ADD_GENERAL_POINTS:
 			// Only while a game that allows cheats is running, so a tap in the menu cannot be
 			// stored up and surprise-apply to a game started later.
@@ -143,6 +151,14 @@ void set( Int id, Int value )
 		case ACT_MAX_RANK:
 			if( gameAllowsCheats() )
 				s_pendingMaxRank = true;
+			break;
+		case ACT_REPAIR_ALL_BUILDINGS:
+			if( gameAllowsCheats() )
+				s_pendingRepairAllBuildings = true;
+			break;
+		case ACT_INSTANT_CAPTURE:
+			if( gameAllowsCheats() )
+				s_pendingInstantCapture = true;
 			break;
 		default: break;
 	}
@@ -181,6 +197,7 @@ Bool freezeMoney( const Player *player ) { return s_freezeMoney && appliesTo( pl
 Bool fastBuild( const Player *player )   { return s_fastBuild && appliesTo( player ); }
 Bool energyFull( const Player *player )  { return s_energyFull && appliesTo( player ); }
 Int  energyBonus( const Player *player ) { return appliesTo( player ) ? (Int)s_energyBonus : 0; }
+Bool buildAnywhere( const Player *player ) { return s_buildAnywhere && appliesTo( player ); }
 Bool noCooldown( const Player *player )  { return s_noCooldown && appliesTo( player ); }
 
 Bool healthBarsAlways()
@@ -302,6 +319,59 @@ void update( Player *player )
 
 	if( s_pendingMaxRank.exchange( false ) && TheRankInfoStore != nullptr )
 		player->setRankLevel( TheRankInfoStore->getRankLevelCount() );
+
+	// One-shot repair. Run on the game thread and touch only live structures
+	// owned by the local human player; AI and enemy objects are never modified.
+	// One-shot Instant Capture. The action only touches capturable structures near a local
+	// human capture-capable unit; ActionManager remains authoritative for legal capture targets.
+	if( s_pendingInstantCapture.exchange( false ) && TheGameLogic != nullptr && TheActionManager != nullptr )
+	{
+		const Real captureRadius = 96.0f;
+		const Real captureRadiusSq = captureRadius * captureRadius;
+		for( Object *target = TheGameLogic->getFirstObject(); target != nullptr; target = target->getNextObject() )
+		{
+			if( target->getControllingPlayer() == player || target->isEffectivelyDead() ||
+				!target->isKindOf( KINDOF_STRUCTURE ) || target->isKindOf( KINDOF_IMMUNE_TO_CAPTURE ) ||
+				target->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) || target->testStatus( OBJECT_STATUS_SOLD ) )
+				continue;
+			if( target->getShroudedStatus( player->getPlayerIndex() ) >= OBJECTSHROUD_FOGGED )
+				continue;
+			const Coord3D *targetPos = target->getPosition();
+			if( targetPos == nullptr ) continue;
+			for( Object *unit = TheGameLogic->getFirstObject(); unit != nullptr; unit = unit->getNextObject() )
+			{
+				if( unit->getControllingPlayer() != player || unit->isEffectivelyDead() ) continue;
+				if( !unit->hasSpecialPower( SPECIAL_INFANTRY_CAPTURE_BUILDING ) &&
+					!unit->hasSpecialPower( SPECIAL_BLACKLOTUS_CAPTURE_BUILDING ) ) continue;
+				const Coord3D *unitPos = unit->getPosition();
+				if( unitPos == nullptr ) continue;
+				const Real dx = unitPos->x - targetPos->x;
+				const Real dy = unitPos->y - targetPos->y;
+				if( dx * dx + dy * dy > captureRadiusSq ) continue;
+				if( TheActionManager->canCaptureBuilding( unit, target, CMD_FROM_SCRIPT ) )
+				{
+					// setTeam performs the engine's ownership/team transition and capture callbacks.
+					target->setTeam( player->getDefaultTeam() );
+					break;
+				}
+			}
+		}
+	}
+
+	if( s_pendingRepairAllBuildings.exchange( false ) && TheGameLogic != nullptr )
+	{
+		for( Object *obj = TheGameLogic->getFirstObject(); obj != nullptr; obj = obj->getNextObject() )
+		{
+			if( obj->getControllingPlayer() != player || obj->isEffectivelyDead() || !obj->isKindOf( KINDOF_STRUCTURE ) )
+				continue;
+			BodyModuleInterface *body = obj->getBodyModule();
+			if( body == nullptr )
+				continue;
+			const Real missingHealth = body->getMaxHealth() - body->getHealth();
+			if( missingHealth > 0.0f )
+				obj->attemptHealing( missingHealth, nullptr );
+		}
+	}
 }
 
 } // namespace GXCheats

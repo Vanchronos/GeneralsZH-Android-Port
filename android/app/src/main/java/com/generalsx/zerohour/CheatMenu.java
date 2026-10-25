@@ -59,6 +59,9 @@ final class CheatMenu {
     private static final int SET_HEALTH_BARS = 7;
     private static final int ACT_ADD_GENERAL_POINTS = 8;
     private static final int ACT_MAX_RANK = 9;
+    private static final int ACT_REPAIR_ALL_BUILDINGS = 18;
+    private static final int ACT_INSTANT_CAPTURE = 19;
+    private static final int SET_BUILD_ANYWHERE = 20;
     private static final int SET_DAMAGE = 11;
     private static final int SET_FIRE_RATE = 12;
     private static final int SET_TOUGH = 13;
@@ -98,6 +101,7 @@ final class CheatMenu {
     private ToggleRow speed;
     private ToggleRow elite;
     private ToggleRow airAmmo;
+    private ToggleRow buildAnywhere;
     private TextView energyLabel;
     private int energyBonus;
     private boolean nativeMissing;
@@ -230,6 +234,7 @@ final class CheatMenu {
         speed = addToggle(R.string.cheat_speed, SET_SPEED);
         elite = addToggle(R.string.cheat_elite, SET_ELITE);
         airAmmo = addToggle(R.string.cheat_air_ammo, SET_AIR_AMMO);
+        buildAnywhere = addToggle(R.string.cheat_build_anywhere, SET_BUILD_ANYWHERE);
         addActionRow();
 
         TextView note = new TextView(activity);
@@ -352,6 +357,27 @@ final class CheatMenu {
         row.addView(rank, new LinearLayout.LayoutParams(0, dp(36), 1f));
 
         panel.addView(row);
+
+        // One-shot engine action; no fake toggle/state is shown.
+        LinearLayout repairRow = new LinearLayout(activity);
+        repairRow.setOrientation(LinearLayout.HORIZONTAL);
+        repairRow.setPadding(0, dp(2), 0, dp(2));
+        TextView repair = makeChip(activity.getString(R.string.cheat_repair_all_buildings));
+        repair.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { runAction(ACT_REPAIR_ALL_BUILDINGS, 0); }
+        });
+        repairRow.addView(repair, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
+        panel.addView(repairRow);
+
+        LinearLayout captureRow = new LinearLayout(activity);
+        captureRow.setOrientation(LinearLayout.HORIZONTAL);
+        captureRow.setPadding(0, dp(2), 0, dp(2));
+        TextView instantCapture = makeChip(activity.getString(R.string.cheat_instant_capture));
+        instantCapture.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { runAction(ACT_INSTANT_CAPTURE, 0); }
+        });
+        captureRow.addView(instantCapture, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
+        panel.addView(captureRow);
     }
 
     /** A one-shot action; the engine applies it on its own thread. Tells the player if it could not run. */
@@ -466,6 +492,7 @@ final class CheatMenu {
         speed.setOn((flags & 2048) != 0);
         elite.setOn((flags & 4096) != 0);
         airAmmo.setOn((flags & 8192) != 0);
+        buildAnywhere.setOn((flags & 16384) != 0);
         updateEnergyLabel();
     }
 
