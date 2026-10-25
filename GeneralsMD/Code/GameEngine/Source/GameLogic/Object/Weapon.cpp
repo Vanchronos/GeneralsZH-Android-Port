@@ -1960,7 +1960,7 @@ void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraB
 		extra->appendBonuses(flags, bonus);
 
 	// GXCHEAT:weapon-bonus  GeneralsX @feature Android cheat menu: damage / fire-rate multiplier for the local human player's weapons only.
-	GXCheats::applyWeaponBonus( source->getControllingPlayer(), bonus );
+	GXCheats::applyWeaponBonus( source, source->getControllingPlayer(), bonus );
 #if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
      // Fix v1 quad cannon damage this way for now
      const char* weaponName = m_template->getName().str();

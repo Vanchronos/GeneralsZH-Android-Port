@@ -27,6 +27,7 @@
 #include "Lib/BaseType.h"
 
 class Player;
+class Object;
 class WeaponBonus;
 
 namespace GXCheats
@@ -66,7 +67,10 @@ namespace GXCheats
 		SET_NPC_STOP = 21,            // temporarily disable non-local NPC-owned objects
 		SET_AUTO_HEAL_UNITS = 22,     // gradually heal local player's non-structure units
 		SET_AUTO_REPAIR_ALL = 23,     // gradually heal local player's units and structures
-		ACT_HEAL_REPAIR_ALL = 24      // one-shot: fully heal local player's live objects
+		ACT_HEAL_REPAIR_ALL = 24,      // one-shot: fully heal local player's live objects
+		SET_TURRET_FIRE_SPEED = 25,  // 3x faster weapon fire on local vehicles/structures
+		SET_TURRET_RANGE = 26,       // 2x weapon range on local vehicles/structures
+		SET_TURRET_DETECTION = 27   // 2x vision/shroud clearing on local vehicles/structures
 	};
 	enum QueryId { QUERY_AVAILABLE = 0, QUERY_FLAGS = 1, QUERY_ENERGY_BONUS = 2 };
 
@@ -77,7 +81,9 @@ namespace GXCheats
 		FLAG_NO_COOLDOWN = 16, FLAG_REVEAL_MAP = 32, FLAG_HEALTH_BARS = 64,
 		FLAG_DAMAGE = 256, FLAG_FIRE_RATE = 512, FLAG_TOUGH = 1024, FLAG_SPEED = 2048,
 		FLAG_ELITE = 4096, FLAG_AIR_AMMO = 8192, FLAG_BUILD_ANYWHERE = 16384,
-		FLAG_NPC_STOP = 32768, FLAG_AUTO_HEAL_UNITS = 65536, FLAG_AUTO_REPAIR_ALL = 131072
+		FLAG_NPC_STOP = 32768, FLAG_AUTO_HEAL_UNITS = 65536, FLAG_AUTO_REPAIR_ALL = 131072,
+		FLAG_TURRET_FIRE_SPEED = 262144, FLAG_TURRET_RANGE = 524288,
+		FLAG_TURRET_DETECTION = 1048576
 	};
 
 	// ---- from the Android UI thread (thread-safe; the engine applies them on its own thread) ----
@@ -108,7 +114,8 @@ namespace GXCheats
 	Bool noCooldown( const Player *player );
 
 	// Weapon::computeBonus(): scale damage / fire rate if the weapon belongs to the local human player.
-	void applyWeaponBonus( const Player *owner, WeaponBonus &bonus );
+	void applyWeaponBonus( const Object *source, const Player *owner, WeaponBonus &bonus );
+	Real turretDetectionScale( const Object *object );
 
 	// ActiveBody::attemptDamage(): 1 normally, kDamageTakenScale for the local human player's objects.
 	Real damageTakenScale( const Player *owner );

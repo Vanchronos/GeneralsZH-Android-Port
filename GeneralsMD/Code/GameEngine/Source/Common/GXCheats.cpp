@@ -57,6 +57,9 @@ namespace
 	std::atomic<bool> s_npcStop( false );
 	std::atomic<bool> s_autoHealUnits( false );
 	std::atomic<bool> s_autoRepairAll( false );
+	std::atomic<bool> s_turretFireSpeed( false );
+	std::atomic<bool> s_turretRange( false );
+	std::atomic<bool> s_turretDetection( false );
 
 	// One-shot requests from the UI thread. They are carried out in update(), on the game thread,
 	// because changing a Player from the Android UI thread would race with the game logic.
@@ -107,7 +110,10 @@ Int getFlags()
 		| (s_buildAnywhere ? FLAG_BUILD_ANYWHERE : 0)
 		| (s_npcStop ? FLAG_NPC_STOP : 0)
 		| (s_autoHealUnits ? FLAG_AUTO_HEAL_UNITS : 0)
-		| (s_autoRepairAll ? FLAG_AUTO_REPAIR_ALL : 0);
+		| (s_autoRepairAll ? FLAG_AUTO_REPAIR_ALL : 0)
+		| (s_turretFireSpeed ? FLAG_TURRET_FIRE_SPEED : 0)
+		| (s_turretRange ? FLAG_TURRET_RANGE : 0)
+		| (s_turretDetection ? FLAG_TURRET_DETECTION : 0);
 }
 
 Int getEnergyBonus() { return s_energyBonus; }
@@ -152,6 +158,9 @@ void set( Int id, Int value )
 		case SET_NPC_STOP: s_npcStop = value != 0; break;
 		case SET_AUTO_HEAL_UNITS: s_autoHealUnits = value != 0; break;
 		case SET_AUTO_REPAIR_ALL: s_autoRepairAll = value != 0; break;
+		case SET_TURRET_FIRE_SPEED: s_turretFireSpeed = value != 0; break;
+		case SET_TURRET_RANGE: s_turretRange = value != 0; break;
+		case SET_TURRET_DETECTION: s_turretDetection = value != 0; break;
 		case ACT_HEAL_REPAIR_ALL:
 			if( gameAllowsCheats() )
 				s_pendingHealRepairAll = true;
@@ -220,14 +229,33 @@ Bool healthBarsAlways()
 }
 
 // Called for every weapon of every player; only the local human's weapons are ever changed.
-void applyWeaponBonus( const Player *owner, WeaponBonus &bonus )
+void applyWeaponBonus( const Object *source, const Player *owner, WeaponBonus &bonus )
 {
-	if( !(s_damage || s_fireRate) || !appliesTo( owner ) )
+	const bool vehicleOrStructure = source != nullptr
+		&& (source->isKindOf( KINDOF_VEHICLE ) || source->isKindOf( KINDOF_STRUCTURE ));
+	const bool turretFire = vehicleOrStructure && s_turretFireSpeed;
+	const bool turretRange = vehicleOrStructure && s_turretRange;
+	if( !(s_damage || s_fireRate || turretFire || turretRange) || !appliesTo( owner ) )
 		return;
 	if( s_damage )
 		bonus.setField( WeaponBonus::DAMAGE, bonus.getField( WeaponBonus::DAMAGE ) * kDamageScale );
 	if( s_fireRate )
 		bonus.setField( WeaponBonus::RATE_OF_FIRE, bonus.getField( WeaponBonus::RATE_OF_FIRE ) * kFireRateScale );
+	// Avoid stacking two separate x3 fire-rate switches to x9. The existing general Fire Rate
+	// cheat already supplies x3 to this weapon; otherwise this turret-specific toggle supplies x3.
+	if( turretFire && !s_fireRate )
+		bonus.setField( WeaponBonus::RATE_OF_FIRE, bonus.getField( WeaponBonus::RATE_OF_FIRE ) * 3.0f );
+	if( turretRange )
+		bonus.setField( WeaponBonus::RANGE, bonus.getField( WeaponBonus::RANGE ) * 2.0f );
+}
+
+Real turretDetectionScale( const Object *object )
+{
+	if( !s_turretDetection || object == nullptr )
+		return 1.0f;
+	if( !(object->isKindOf( KINDOF_VEHICLE ) || object->isKindOf( KINDOF_STRUCTURE )) )
+		return 1.0f;
+	return appliesTo( object->getControllingPlayer() ) ? 2.0f : 1.0f;
 }
 
 Real damageTakenScale( const Player *owner )

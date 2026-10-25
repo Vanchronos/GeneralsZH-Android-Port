@@ -68,6 +68,9 @@ final class CheatMenu {
     private static final int SET_AUTO_HEAL_UNITS = 22;
     private static final int SET_AUTO_REPAIR_ALL = 23;
     private static final int ACT_HEAL_REPAIR_ALL = 24;
+    private static final int SET_TURRET_FIRE_SPEED = 25;
+    private static final int SET_TURRET_RANGE = 26;
+    private static final int SET_TURRET_DETECTION = 27;
     private static final int SET_DAMAGE = 11;
     private static final int SET_FIRE_RATE = 12;
     private static final int SET_TOUGH = 13;
@@ -112,6 +115,9 @@ final class CheatMenu {
     private ToggleRow npcStop;
     private ToggleRow autoHealUnits;
     private ToggleRow autoRepairAll;
+    private ToggleRow turretFireSpeed;
+    private ToggleRow turretRange;
+    private ToggleRow turretDetection;
     private TextView energyLabel;
     private int energyBonus;
     private boolean nativeMissing;
@@ -275,6 +281,9 @@ final class CheatMenu {
         npcStop = addToggle("NPC STOP (ALLY + ENEMY)", SET_NPC_STOP);
         autoHealUnits = addToggle("AUTO HEAL UNITS", SET_AUTO_HEAL_UNITS);
         autoRepairAll = addToggle("AUTO REPAIR UNITS / BUILDINGS", SET_AUTO_REPAIR_ALL);
+        turretFireSpeed = addToggle("TURRET FIRE SPEED X3", SET_TURRET_FIRE_SPEED);
+        turretRange = addToggle("TURRET RANGE X2", SET_TURRET_RANGE);
+        turretDetection = addToggle("TURRET DETECTION X2", SET_TURRET_DETECTION);
         addActionRow();
 
         TextView note = new TextView(activity);
@@ -592,6 +601,9 @@ final class CheatMenu {
         npcStop.setOn((flags & 32768) != 0);
         autoHealUnits.setOn((flags & 65536) != 0);
         autoRepairAll.setOn((flags & 131072) != 0);
+        turretFireSpeed.setOn((flags & 262144) != 0);
+        turretRange.setOn((flags & 524288) != 0);
+        turretDetection.setOn((flags & 1048576) != 0);
         updateEnergyLabel();
     }
 

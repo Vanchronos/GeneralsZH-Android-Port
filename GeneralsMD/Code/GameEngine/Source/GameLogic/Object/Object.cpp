@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include "Common/GXCheats.h"
 #include <cmath>	// For isnan() on Linux
 #define DEFINE_WEAPONCONDITIONMAP
 #include "Common/BitFlagsIO.h"
@@ -5281,7 +5282,7 @@ Real Object::getVisionRange() const
 		}
 	}
 #endif
-	return m_visionRange;
+	return m_visionRange * GXCheats::turretDetectionScale( this );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5318,7 +5319,7 @@ Real Object::getShroudClearingRange() const
 	}
 #endif
 
-	return shroudClearingRange;
+	return shroudClearingRange * GXCheats::turretDetectionScale( this );
 }
 
 //-------------------------------------------------------------------------------------------------
