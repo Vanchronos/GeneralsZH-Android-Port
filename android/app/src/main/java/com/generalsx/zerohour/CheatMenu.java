@@ -78,9 +78,10 @@ final class CheatMenu {
     private static final int ENERGY_STEP = 100;  // kW per tap on + / -
     private static final int ENERGY_MAX = 2000;
 
-    private static final int COLOR_ON = 0xFF2FA866;
-    private static final int COLOR_OFF = 0xFF536170;
-    private static final int COLOR_BUTTON = 0xFF263747;
+    // Refined tactical palette; gameplay and JNI IDs are unchanged.
+    private static final int COLOR_ON = 0xFF269B63;
+    private static final int COLOR_OFF = 0xFF536477;
+    private static final int COLOR_BUTTON = 0xFF263B50;
 
     private final Activity activity;
     private final ViewGroup parent;
@@ -184,12 +185,15 @@ final class CheatMenu {
         toggleButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         toggleButton.setTypeface(null, Typeface.BOLD);
         toggleButton.setGravity(Gravity.CENTER);
-        toggleButton.setAlpha(0.8f);
-        GradientDrawable chip = new GradientDrawable();
-        chip.setColor(0xE6247B46);
-        chip.setStroke(dp(1), 0xFF91E5B0);
-        chip.setCornerRadius(dp(8));
+        toggleButton.setPadding(dp(6), 0, dp(6), 0);
+        toggleButton.setAlpha(0.98f);
+        GradientDrawable chip = new GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[] { 0xF13FAE75, 0xF01B6746 });
+        chip.setStroke(dp(1), 0xFF9BE8B8);
+        chip.setCornerRadius(dp(10));
         toggleButton.setBackground(chip);
+        toggleButton.setElevation(dp(5));
         RelativeLayout.LayoutParams buttonParams = new RelativeLayout.LayoutParams(dp(56), dp(32));
         buttonParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
         buttonParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
@@ -200,28 +204,51 @@ final class CheatMenu {
 
         panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
-        GradientDrawable card = new GradientDrawable();
-        card.setColor(0xF0111722);
-        card.setStroke(dp(1), 0xFF3B566B);
-        card.setCornerRadius(dp(12));
+        GradientDrawable card = new GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[] { 0xF01B2938, 0xF00D141E });
+        card.setStroke(dp(1), 0xFF49677D);
+        card.setCornerRadius(dp(14));
         panel.setBackground(card);
+        panel.setElevation(dp(8));
         panel.setClickable(true); // swallow touches so they do not reach the game underneath
         int pad = dp(12);
         panel.setPadding(pad, pad, pad, pad);
 
         TextView title = new TextView(activity);
         title.setText(R.string.cheat_title);
-        title.setTextColor(Color.WHITE);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        title.setTextColor(0xFFF2F7FC);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         title.setTypeface(null, Typeface.BOLD);
-        title.setTextColor(0xFFEAF2F8);
+        title.setShadowLayer(1.5f, 0, dp(1), 0x4438D996);
+        title.setPadding(dp(2), dp(1), dp(2), dp(3));
         panel.addView(title);
+
+        // A small accent bar polishes the existing header without changing its layout.
+        View accent = new View(activity);
+        GradientDrawable accentShape = new GradientDrawable();
+        accentShape.setColor(0xFF4DD28B);
+        accentShape.setCornerRadius(dp(2));
+        accent.setBackground(accentShape);
+        LinearLayout.LayoutParams accentParams =
+            new LinearLayout.LayoutParams(dp(42), dp(3));
+        accentParams.bottomMargin = dp(7);
+        panel.addView(accent, accentParams);
 
         statusText = new TextView(activity);
         statusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        statusText.setTextColor(0xFFFFB74D);
-        statusText.setPadding(0, dp(2), 0, dp(6));
-        panel.addView(statusText);
+        statusText.setTextColor(0xFFFFC36A);
+        statusText.setPadding(dp(8), dp(5), dp(8), dp(5));
+        GradientDrawable statusPill = new GradientDrawable();
+        statusPill.setColor(0xFF283342);
+        statusPill.setStroke(dp(1), 0xFF405367);
+        statusPill.setCornerRadius(dp(8));
+        statusText.setBackground(statusPill);
+        LinearLayout.LayoutParams statusParams =
+            new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        statusParams.bottomMargin = dp(7);
+        panel.addView(statusText, statusParams);
 
         maxMoney = addToggle(R.string.cheat_max_money, SET_MAX_MONEY);
         freezeMoney = addToggle(R.string.cheat_freeze_money, SET_FREEZE_MONEY);
@@ -248,9 +275,16 @@ final class CheatMenu {
         panel.addView(note);
 
         panelRoot = new ScrollView(activity);
+        panelRoot.setFillViewport(false);
+        panelRoot.setClipToPadding(false);
+        panelRoot.setVerticalScrollBarEnabled(false);
+        panelRoot.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        panelRoot.setBackgroundColor(Color.TRANSPARENT);
         panelRoot.addView(panel);
+        int screenWidth = activity.getResources().getDisplayMetrics().widthPixels;
+        int panelWidth = Math.min(dp(310), Math.max(dp(220), screenWidth - dp(86)));
         RelativeLayout.LayoutParams panelParams =
-            new RelativeLayout.LayoutParams(dp(310), ViewGroup.LayoutParams.WRAP_CONTENT);
+            new RelativeLayout.LayoutParams(panelWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
         panelParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
         panelParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
         panelParams.leftMargin = dp(70);
@@ -273,15 +307,18 @@ final class CheatMenu {
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
             row.setMinimumHeight(dp(44));
+            row.setPadding(dp(4), dp(1), 0, dp(1));
             row.setClickable(true);
 
             TextView label = new TextView(activity);
             label.setText(labelRes);
-            label.setTextColor(Color.WHITE);
+            label.setTextColor(0xFFE8EEF5);
             label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            label.setPadding(dp(2), dp(2), dp(4), dp(2));
             row.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
             chip = makeChip("OFF");
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             row.addView(chip, new LinearLayout.LayoutParams(dp(60), dp(32)));
             setOn(false);
 
@@ -294,6 +331,14 @@ final class CheatMenu {
             row.setOnClickListener(flip);
             chip.setOnClickListener(flip);
             panel.addView(row);
+
+            View divider = new View(activity);
+            divider.setBackgroundColor(0x334D6479);
+            LinearLayout.LayoutParams dividerParams =
+                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
+            dividerParams.topMargin = dp(1);
+            dividerParams.bottomMargin = dp(1);
+            panel.addView(divider, dividerParams);
         }
 
         void setOn(boolean value) {
@@ -410,17 +455,39 @@ final class CheatMenu {
         t.setTextColor(Color.WHITE);
         t.setTypeface(null, Typeface.BOLD);
         t.setGravity(Gravity.CENTER);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        t.setPadding(dp(5), dp(1), dp(5), dp(1));
         t.setClickable(true);
+        t.setFocusable(true);
         setChipColor(t, COLOR_BUTTON);
+        t.setElevation(dp(1));
         return t;
     }
 
     private void setChipColor(TextView t, int color) {
-        GradientDrawable g = new GradientDrawable();
-        g.setColor(color);
-        g.setCornerRadius(dp(8));
+        GradientDrawable g = new GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[] { lighten(color, 0.12f), darken(color, 0.08f) });
+        int stroke = color == COLOR_ON ? 0xFF55C98B
+            : (color == COLOR_OFF ? 0xFF71859A : 0xFF40596E);
+        g.setStroke(dp(1), stroke);
+        g.setCornerRadius(dp(9));
         t.setBackground(g);
+    }
+
+    private int lighten(int color, float amount) {
+        int r = Color.red(color), g = Color.green(color), b = Color.blue(color);
+        return Color.rgb(
+            Math.min(255, (int) (r + (255 - r) * amount)),
+            Math.min(255, (int) (g + (255 - g) * amount)),
+            Math.min(255, (int) (b + (255 - b) * amount)));
+    }
+
+    private int darken(int color, float amount) {
+        return Color.rgb(
+            Math.max(0, (int) (Color.red(color) * (1f - amount))),
+            Math.max(0, (int) (Color.green(color) * (1f - amount))),
+            Math.max(0, (int) (Color.blue(color) * (1f - amount))));
     }
 
     // A short tap opens/closes the panel; dragging moves the button out of the way.
