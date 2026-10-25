@@ -18,6 +18,8 @@
 
 package com.generalsx.zerohour;
 
+
+// SIMPLE_TACTICAL_PALETTE_V1
 import android.app.Activity;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -76,9 +78,9 @@ final class CheatMenu {
     private static final int ENERGY_STEP = 100;  // kW per tap on + / -
     private static final int ENERGY_MAX = 2000;
 
-    private static final int COLOR_ON = 0xFF2E9E50;
-    private static final int COLOR_OFF = 0xFF8A3B3B;
-    private static final int COLOR_BUTTON = 0xFF3A4A5C;
+    private static final int COLOR_ON = 0xFF2FA866;
+    private static final int COLOR_OFF = 0xFF536170;
+    private static final int COLOR_BUTTON = 0xFF263747;
 
     private final Activity activity;
     private final ViewGroup parent;
@@ -184,8 +186,8 @@ final class CheatMenu {
         toggleButton.setGravity(Gravity.CENTER);
         toggleButton.setAlpha(0.8f);
         GradientDrawable chip = new GradientDrawable();
-        chip.setColor(0xCC1E6B3A);
-        chip.setStroke(dp(1), 0xFF7FD99A);
+        chip.setColor(0xE6247B46);
+        chip.setStroke(dp(1), 0xFF91E5B0);
         chip.setCornerRadius(dp(8));
         toggleButton.setBackground(chip);
         RelativeLayout.LayoutParams buttonParams = new RelativeLayout.LayoutParams(dp(56), dp(32));
@@ -199,9 +201,9 @@ final class CheatMenu {
         panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable card = new GradientDrawable();
-        card.setColor(0xF01B1F24);
-        card.setStroke(dp(1), 0xFF5C6670);
-        card.setCornerRadius(dp(10));
+        card.setColor(0xF0111722);
+        card.setStroke(dp(1), 0xFF3B566B);
+        card.setCornerRadius(dp(12));
         panel.setBackground(card);
         panel.setClickable(true); // swallow touches so they do not reach the game underneath
         int pad = dp(12);
@@ -212,6 +214,7 @@ final class CheatMenu {
         title.setTextColor(Color.WHITE);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         title.setTypeface(null, Typeface.BOLD);
+        title.setTextColor(0xFFEAF2F8);
         panel.addView(title);
 
         statusText = new TextView(activity);
@@ -416,7 +419,7 @@ final class CheatMenu {
     private void setChipColor(TextView t, int color) {
         GradientDrawable g = new GradientDrawable();
         g.setColor(color);
-        g.setCornerRadius(dp(6));
+        g.setCornerRadius(dp(8));
         t.setBackground(g);
     }
 
