@@ -43,8 +43,8 @@ import android.widget.Toast;
 // A small draggable CHEAT button floats over the game; tapping it opens/closes the panel.
 // Every control here is drawn by hand (colored ON/OFF chips and +/- chips) instead of using the
 // stock Switch/SeekBar widgets, which vanished under the app theme on a real device.
-// What the controls do is decided in the engine (Common/GXCheats.cpp): only the human player on
-// this device is affected, never an AI player, and nothing applies in LAN/online matches or replays.
+// Most cheats affect the local human player; NPC Stop is the explicit single-player exception
+// for non-local AI objects. Nothing applies in LAN/online matches or replays.
 // All methods run on the UI thread.
 final class CheatMenu {
 
@@ -64,6 +64,10 @@ final class CheatMenu {
     private static final int ACT_REPAIR_ALL_BUILDINGS = 18;
     private static final int ACT_INSTANT_CAPTURE = 19;
     private static final int SET_BUILD_ANYWHERE = 20;
+    private static final int SET_NPC_STOP = 21;
+    private static final int SET_AUTO_HEAL_UNITS = 22;
+    private static final int SET_AUTO_REPAIR_ALL = 23;
+    private static final int ACT_HEAL_REPAIR_ALL = 24;
     private static final int SET_DAMAGE = 11;
     private static final int SET_FIRE_RATE = 12;
     private static final int SET_TOUGH = 13;
@@ -105,6 +109,9 @@ final class CheatMenu {
     private ToggleRow elite;
     private ToggleRow airAmmo;
     private ToggleRow buildAnywhere;
+    private ToggleRow npcStop;
+    private ToggleRow autoHealUnits;
+    private ToggleRow autoRepairAll;
     private TextView energyLabel;
     private int energyBonus;
     private boolean nativeMissing;
@@ -265,6 +272,9 @@ final class CheatMenu {
         elite = addToggle(R.string.cheat_elite, SET_ELITE);
         airAmmo = addToggle(R.string.cheat_air_ammo, SET_AIR_AMMO);
         buildAnywhere = addToggle(R.string.cheat_build_anywhere, SET_BUILD_ANYWHERE);
+        npcStop = addToggle("NPC STOP (ALLY + ENEMY)", SET_NPC_STOP);
+        autoHealUnits = addToggle("AUTO HEAL UNITS", SET_AUTO_HEAL_UNITS);
+        autoRepairAll = addToggle("AUTO REPAIR UNITS / BUILDINGS", SET_AUTO_REPAIR_ALL);
         addActionRow();
 
         TextView note = new TextView(activity);
@@ -302,7 +312,9 @@ final class CheatMenu {
         private final TextView chip;
         private boolean on;
 
-        ToggleRow(int labelRes, final int id) {
+        ToggleRow(int labelRes, final int id) { this(activity.getText(labelRes), id); }
+
+        ToggleRow(CharSequence labelText, final int id) {
             LinearLayout row = new LinearLayout(activity);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
@@ -311,7 +323,7 @@ final class CheatMenu {
             row.setClickable(true);
 
             TextView label = new TextView(activity);
-            label.setText(labelRes);
+            label.setText(labelText);
             label.setTextColor(0xFFE8EEF5);
             label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
             label.setPadding(dp(2), dp(2), dp(4), dp(2));
@@ -350,6 +362,10 @@ final class CheatMenu {
 
     private ToggleRow addToggle(int labelRes, int id) {
         return new ToggleRow(labelRes, id);
+    }
+
+    private ToggleRow addToggle(String labelText, int id) {
+        return new ToggleRow(labelText, id);
     }
 
     /** Extra power: label with  [-]  [+]  chips, 100 kW per tap. */
@@ -426,6 +442,16 @@ final class CheatMenu {
         });
         captureRow.addView(instantCapture, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
         panel.addView(captureRow);
+
+        LinearLayout healRepairRow = new LinearLayout(activity);
+        healRepairRow.setOrientation(LinearLayout.HORIZONTAL);
+        healRepairRow.setPadding(0, dp(2), 0, dp(2));
+        TextView healRepair = makeChip("HEAL / REPAIR ALL");
+        healRepair.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { runAction(ACT_HEAL_REPAIR_ALL, 0); }
+        });
+        healRepairRow.addView(healRepair, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
+        panel.addView(healRepairRow);
     }
 
     /** A one-shot action; the engine applies it on its own thread. Tells the player if it could not run. */
@@ -563,6 +589,9 @@ final class CheatMenu {
         elite.setOn((flags & 4096) != 0);
         airAmmo.setOn((flags & 8192) != 0);
         buildAnywhere.setOn((flags & 16384) != 0);
+        npcStop.setOn((flags & 32768) != 0);
+        autoHealUnits.setOn((flags & 65536) != 0);
+        autoRepairAll.setOn((flags & 131072) != 0);
         updateEnergyLabel();
     }
 

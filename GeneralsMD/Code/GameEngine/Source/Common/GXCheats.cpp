@@ -54,6 +54,9 @@ namespace
 	std::atomic<bool> s_speed( false );
 	std::atomic<bool> s_elite( false );
 	std::atomic<bool> s_airAmmo( false );
+	std::atomic<bool> s_npcStop( false );
+	std::atomic<bool> s_autoHealUnits( false );
+	std::atomic<bool> s_autoRepairAll( false );
 
 	// One-shot requests from the UI thread. They are carried out in update(), on the game thread,
 	// because changing a Player from the Android UI thread would race with the game logic.
@@ -61,6 +64,7 @@ namespace
 	std::atomic<bool> s_pendingMaxRank( false );
 	std::atomic<bool> s_pendingRepairAllBuildings( false ); // gx_repair_all_buildings_patch
 	std::atomic<bool> s_pendingInstantCapture( false ); // gx_cheat141_all_v1
+	std::atomic<bool> s_pendingHealRepairAll( false ); // heal all local units and structures
 	std::atomic<bool> s_buildAnywhere( false );
 
 	// State that only the game thread touches.
@@ -100,7 +104,10 @@ Int getFlags()
 		| (s_speed ? FLAG_SPEED : 0)
 		| (s_elite ? FLAG_ELITE : 0)
 		| (s_airAmmo ? FLAG_AIR_AMMO : 0)
-		| (s_buildAnywhere ? FLAG_BUILD_ANYWHERE : 0);
+		| (s_buildAnywhere ? FLAG_BUILD_ANYWHERE : 0)
+		| (s_npcStop ? FLAG_NPC_STOP : 0)
+		| (s_autoHealUnits ? FLAG_AUTO_HEAL_UNITS : 0)
+		| (s_autoRepairAll ? FLAG_AUTO_REPAIR_ALL : 0);
 }
 
 Int getEnergyBonus() { return s_energyBonus; }
@@ -142,6 +149,13 @@ void set( Int id, Int value )
 		case SET_ELITE:        s_elite = value != 0; break;
 		case SET_AIR_AMMO:     s_airAmmo = value != 0; break;
 		case SET_BUILD_ANYWHERE: s_buildAnywhere = value != 0; break;
+		case SET_NPC_STOP: s_npcStop = value != 0; break;
+		case SET_AUTO_HEAL_UNITS: s_autoHealUnits = value != 0; break;
+		case SET_AUTO_REPAIR_ALL: s_autoRepairAll = value != 0; break;
+		case ACT_HEAL_REPAIR_ALL:
+			if( gameAllowsCheats() )
+				s_pendingHealRepairAll = true;
+			break;
 		case ACT_ADD_GENERAL_POINTS:
 			// Only while a game that allows cheats is running, so a tap in the menu cannot be
 			// stored up and surprise-apply to a game started later.
@@ -228,6 +242,8 @@ static void upkeepObjects( Player *player )
 	const Real speedScale = s_speed ? kSpeedScale : 1.0f; // written every time, so switching off restores 1.0
 	const bool elite = s_elite;
 	const bool airAmmo = s_airAmmo;
+	const bool autoHealUnits = s_autoHealUnits;
+	const bool autoRepairAll = s_autoRepairAll;
 
 	for( Object *obj = TheGameLogic->getFirstObject(); obj != nullptr; obj = obj->getNextObject() )
 	{
@@ -251,6 +267,21 @@ static void upkeepObjects( Player *player )
 
 		if( airAmmo && obj->isKindOf( KINDOF_AIRCRAFT ) )
 			obj->reloadAllAmmo( TRUE );
+
+		// Gradual healing is deliberately limited to living objects owned by the local player.
+		BodyModuleInterface *body = obj->getBodyModule();
+		if( body != nullptr && (autoRepairAll || (autoHealUnits && !obj->isKindOf( KINDOF_STRUCTURE ))) )
+		{
+			const Real maxHealth = body->getMaxHealth();
+			const Real missingHealth = maxHealth - body->getHealth();
+			Real healAmount = 0.0f;
+			if( autoHealUnits && !obj->isKindOf( KINDOF_STRUCTURE ) )
+				healAmount += maxHealth * 0.05f; // 10% max HP/second at the existing half-second upkeep
+			if( autoRepairAll )
+				healAmount += maxHealth * 0.10f; // includes units, aircraft and buildings
+			if( healAmount > missingHealth ) healAmount = missingHealth;
+			if( healAmount > 0.0f ) obj->attemptHealing( healAmount, nullptr );
+		}
 	}
 }
 
@@ -268,6 +299,22 @@ void update( Player *player )
 		s_lastEnergyKey = 0;
 	}
 	s_lastFrame = now;
+
+	// NPC Stop: temporarily disable all non-local player-owned objects (AI allies and enemies).
+	// Timed disable expires automatically shortly after OFF, avoiding permanent state changes.
+	if( s_npcStop && TheGameLogic != nullptr )
+	{
+		const UnsignedInt refreshFrames = (LOGICFRAMES_PER_SECOND / 4) > 0 ? (LOGICFRAMES_PER_SECOND / 4) : 1;
+		if( now % refreshFrames == 0 )
+		{
+			for( Object *obj = TheGameLogic->getFirstObject(); obj != nullptr; obj = obj->getNextObject() )
+			{
+				Player *owner = obj->getControllingPlayer();
+				if( owner == nullptr || owner == player || obj->isEffectivelyDead() ) continue;
+				obj->setDisabledUntil( DISABLED_SCRIPT_DISABLED, now + refreshFrames * 2 );
+			}
+		}
+	}
 
 	// Max money: top up once the balance drops below 90% of the cap. deposit() with no sound and
 	// no income tracking, so the income-per-minute statistic is left alone.
@@ -370,6 +417,17 @@ void update( Player *player )
 			const Real missingHealth = body->getMaxHealth() - body->getHealth();
 			if( missingHealth > 0.0f )
 				obj->attemptHealing( missingHealth, nullptr );
+		}
+	}
+
+	// One-shot full heal for all live objects controlled by the local player.
+	if( s_pendingHealRepairAll.exchange( false ) && TheGameLogic != nullptr )
+	{
+		for( Object *obj = TheGameLogic->getFirstObject(); obj != nullptr; obj = obj->getNextObject() )
+		{
+			if( obj->getControllingPlayer() != player || obj->isEffectivelyDead() || obj->getBodyModule() == nullptr )
+				continue;
+			obj->healCompletely();
 		}
 	}
 }

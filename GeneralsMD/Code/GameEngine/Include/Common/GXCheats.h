@@ -19,10 +19,9 @@
 // GeneralsX @feature Android port Single-player cheat menu (engine side).
 //
 // The switches live here; the Android overlay (CheatMenu.java) flips them over JNI.
-// A cheat only ever applies to ONE player: the human at this device (the local player).
-// AI players - enemy, ally or neutral - are never touched. And nothing applies at all in a
-// LAN/online match or a replay: those run in lockstep, and a one-sided change would desync
-// the match (and be unfair to the other humans). Skirmish and campaign only.
+// Most cheats affect only the local human player. NPC Stop is the explicit exception: it applies
+// a short, timed disable to non-local AI-owned objects in single-player Skirmish/Campaign.
+// No cheat applies in a LAN/online match or replay, where one-sided changes could desync play.
 #pragma once
 
 #include "Lib/BaseType.h"
@@ -63,7 +62,11 @@ namespace GXCheats
 		SET_SPEED = 14,              // units move faster
 		SET_ELITE = 15,              // units are always at the top veterancy level
 		SET_AIR_AMMO = 16,           // aircraft never need to reload
-		SET_BUILD_ANYWHERE = 20       // relax local-player placement restrictions
+		SET_BUILD_ANYWHERE = 20,      // relax local-player placement restrictions
+		SET_NPC_STOP = 21,            // temporarily disable non-local NPC-owned objects
+		SET_AUTO_HEAL_UNITS = 22,     // gradually heal local player's non-structure units
+		SET_AUTO_REPAIR_ALL = 23,     // gradually heal local player's units and structures
+		ACT_HEAL_REPAIR_ALL = 24      // one-shot: fully heal local player's live objects
 	};
 	enum QueryId { QUERY_AVAILABLE = 0, QUERY_FLAGS = 1, QUERY_ENERGY_BONUS = 2 };
 
@@ -73,7 +76,8 @@ namespace GXCheats
 		FLAG_MAX_MONEY = 1, FLAG_FREEZE_MONEY = 2, FLAG_FAST_BUILD = 4, FLAG_ENERGY_FULL = 8,
 		FLAG_NO_COOLDOWN = 16, FLAG_REVEAL_MAP = 32, FLAG_HEALTH_BARS = 64,
 		FLAG_DAMAGE = 256, FLAG_FIRE_RATE = 512, FLAG_TOUGH = 1024, FLAG_SPEED = 2048,
-		FLAG_ELITE = 4096, FLAG_AIR_AMMO = 8192, FLAG_BUILD_ANYWHERE = 16384
+		FLAG_ELITE = 4096, FLAG_AIR_AMMO = 8192, FLAG_BUILD_ANYWHERE = 16384,
+		FLAG_NPC_STOP = 32768, FLAG_AUTO_HEAL_UNITS = 65536, FLAG_AUTO_REPAIR_ALL = 131072
 	};
 
 	// ---- from the Android UI thread (thread-safe; the engine applies them on its own thread) ----
